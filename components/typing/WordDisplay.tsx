@@ -6,36 +6,63 @@ import { motion } from "framer-motion"
 interface WordDisplayProps {
   text: string
   currentIndex: number
-  mistakes: Set<number>
+  charResults: boolean[]
 }
 
 export function WordDisplay({
   text,
   currentIndex,
-  mistakes,
+  charResults,
 }: WordDisplayProps) {
-  const characters = useMemo(() => {
-    return text.split("").map((char, index) => {
-      let status: "pending" | "correct" | "incorrect" | "current" = "pending"
-
-      if (index < currentIndex) {
-        status = mistakes.has(index) ? "incorrect" : "correct"
-      } else if (index === currentIndex) {
-        status = "current"
+  const { visibleChars } = useMemo(() => {
+    const words = text.split(" ")
+    let charCount = 0
+    let startWordIndex = 0
+    let currentWordIndex = 0
+    
+    for (let i = 0; i < words.length; i++) {
+      const wordEnd = charCount + words[i].length
+      if (currentIndex >= charCount && currentIndex <= wordEnd) {
+        currentWordIndex = i
+        break
       }
-
-      return { char, status, index }
-    })
-  }, [text, currentIndex, mistakes])
+      charCount += words[i].length + 1
+    }
+    
+    startWordIndex = Math.max(0, currentWordIndex - 3)
+    
+    let startChar = 0
+    for (let i = 0; i < startWordIndex; i++) {
+      startChar += words[i].length + 1
+    }
+    
+    const visibleWords = words.slice(startWordIndex, startWordIndex + 20)
+    const visibleText = visibleWords.join(" ")
+    
+    return {
+      visibleChars: visibleText.split("").map((char, localIndex) => {
+        const globalIndex = startChar + localIndex
+        let status: "pending" | "correct" | "incorrect" | "current" = "pending"
+        
+        if (globalIndex < currentIndex) {
+          status = charResults[globalIndex] ? "correct" : "incorrect"
+        } else if (globalIndex === currentIndex) {
+          status = "current"
+        }
+        
+        return { char, status, globalIndex }
+      })
+    }
+  }, [text, currentIndex, charResults])
 
   return (
-    <div className="relative p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5" />
+    <div className="relative rounded-2xl bg-zinc-900/50 border border-zinc-800 overflow-hidden">
+      <div className="absolute inset-0 bg-linear-to-r from-cyan-500/5 to-blue-500/5" />
       
-      <div className="relative text-2xl leading-relaxed font-mono tracking-wide">
-        {characters.map(({ char, status, index }) => (
+      <div className="relative p-6 text-2xl leading-[48px] font-mono tracking-wide min-h-[144px]">
+        {visibleChars.map(({ char, status, globalIndex }) => (
           <span
-            key={index}
+            key={globalIndex}
             className={`
               relative inline
               ${status === "pending" ? "text-zinc-600" : ""}

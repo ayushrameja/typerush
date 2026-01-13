@@ -1,34 +1,66 @@
 "use client"
 
-import { useCallback } from "react"
+import { useState, useCallback } from "react"
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { TypingTest } from "@/components/typing/TypingTest"
+import { motion, AnimatePresence } from "framer-motion"
+import { SelectionScreen } from "@/components/practice/SelectionScreen"
+import { CountdownScreen } from "@/components/practice/CountdownScreen"
+import { TypingScreen } from "@/components/practice/TypingScreen"
+import { ResultsScreen } from "@/components/practice/ResultsScreen"
+import { useGameStore } from "@/lib/stores/gameStore"
+import { generateTextForDuration, Difficulty } from "@/lib/utils/words"
 import { createClient } from "@/lib/supabase/client"
 import { useUserStore } from "@/lib/stores/userStore"
 import type { Stats } from "@/lib/supabase/database.types"
 
+type FlowState = "selection" | "countdown" | "typing" | "results"
+
 export default function PracticePage() {
+  const [flowState, setFlowState] = useState<FlowState>("selection")
+  const [selectedDuration, setSelectedDuration] = useState(60)
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("medium")
+
   const { user, stats, setStats } = useUserStore()
+  const {
+    wpm,
+    accuracy,
+    mistakes,
+    duration,
+    timeLeft,
+    totalChars,
+    totalWords,
+    wpmHistory,
+    setText,
+    setDuration,
+    startGame,
+    reset,
+  } = useGameStore()
 
-  const handleComplete = useCallback(
-    async (results: {
-      wpm: number
-      accuracy: number
-      mistakes: number
-      duration: number
-    }) => {
-      if (!user || !stats) return
+  const handleStartSelection = useCallback((dur: number, diff: Difficulty) => {
+    setSelectedDuration(dur)
+    setSelectedDifficulty(diff)
+    setDuration(dur)
+    setText(generateTextForDuration(dur, diff))
+    setFlowState("countdown")
+  }, [setDuration, setText])
 
+  const handleCountdownComplete = useCallback(() => {
+    startGame()
+    setFlowState("typing")
+  }, [startGame])
+
+  const handleTypingComplete = useCallback(async () => {
+    setFlowState("results")
+
+    if (user && stats) {
       const supabase = createClient()
-
       const newTotalRaces = stats.total_races + 1
       const newAvgWpm = Math.round(
-        (stats.avg_wpm * stats.total_races + results.wpm) / newTotalRaces
+        (stats.avg_wpm * stats.total_races + wpm) / newTotalRaces
       )
-      const newBestWpm = Math.max(stats.best_wpm, results.wpm)
+      const newBestWpm = Math.max(stats.best_wpm, wpm)
       const newAccuracy = Math.round(
-        (stats.accuracy * stats.total_races + results.accuracy) / newTotalRaces
+        (stats.accuracy * stats.total_races + accuracy) / newTotalRaces
       )
 
       const { data, error } = await supabase
@@ -46,24 +78,37 @@ export default function PracticePage() {
       if (!error && data) {
         setStats(data as Stats)
       }
-    },
-    [user, stats, setStats]
-  )
+    }
+  }, [user, stats, wpm, accuracy, setStats])
+
+  const handleTryAgain = useCallback(() => {
+    reset()
+    setText(generateTextForDuration(selectedDuration, selectedDifficulty))
+    setFlowState("countdown")
+  }, [reset, setText, selectedDuration, selectedDifficulty])
+
+  const handleChangeSettings = useCallback(() => {
+    reset()
+    setFlowState("selection")
+  }, [reset])
+
+  const text = useGameStore((state) => state.text)
+  const timeUsed = duration - timeLeft
 
   return (
-    <div className="min-h-screen py-12 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-4xl mx-auto">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           className="mb-8"
         >
           <Link
             href="/"
-            className="inline-flex items-center text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+            className="inline-flex items-center text-[#888] hover:text-white transition-colors text-sm"
           >
             <svg
-              className="w-5 h-5 mr-2"
+              className="w-4 h-4 mr-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -77,61 +122,47 @@ export default function PracticePage() {
             </svg>
             Back to Home
           </Link>
-
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-            Solo Practice
-          </h1>
-          <p className="text-zinc-500 mt-2">
-            Improve your typing speed and accuracy
-          </p>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <TypingTest onComplete={handleComplete} />
-        </motion.div>
+        <AnimatePresence mode="wait">
+          {flowState === "selection" && (
+            <SelectionScreen 
+              key="selection"
+              onStart={handleStartSelection} 
+            />
+          )}
 
-        {stats && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-12 p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800"
-          >
-            <h2 className="text-xl font-semibold text-zinc-300 mb-4">
-              Your Stats
-            </h2>
-            <div className="grid grid-cols-4 gap-6">
-              <div>
-                <p className="text-3xl font-bold text-cyan-400">
-                  {stats.avg_wpm}
-                </p>
-                <p className="text-zinc-500 text-sm">Avg WPM</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-emerald-400">
-                  {stats.best_wpm}
-                </p>
-                <p className="text-zinc-500 text-sm">Best WPM</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-blue-400">
-                  {stats.total_races}
-                </p>
-                <p className="text-zinc-500 text-sm">Tests Taken</p>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-purple-400">
-                  {stats.accuracy}%
-                </p>
-                <p className="text-zinc-500 text-sm">Avg Accuracy</p>
-              </div>
-            </div>
-          </motion.div>
-        )}
+          {flowState === "countdown" && (
+            <CountdownScreen
+              key="countdown"
+              previewText={text}
+              onComplete={handleCountdownComplete}
+            />
+          )}
+
+          {flowState === "typing" && (
+            <TypingScreen 
+              key="typing"
+              onComplete={handleTypingComplete} 
+            />
+          )}
+
+          {flowState === "results" && (
+            <ResultsScreen
+              key="results"
+              wpm={wpm}
+              accuracy={accuracy}
+              duration={duration}
+              timeUsed={timeUsed}
+              totalChars={totalChars}
+              totalWords={totalWords}
+              mistakes={mistakes}
+              wpmHistory={wpmHistory}
+              onTryAgain={handleTryAgain}
+              onChangeSettings={handleChangeSettings}
+            />
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

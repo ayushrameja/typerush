@@ -28,16 +28,17 @@ export function TypingTest({ onComplete }: TypingTestProps) {
     wpm,
     accuracy,
     streak,
+    charResults,
     setText,
     startCountdown,
     startGame,
     typeChar,
+    deleteChar,
     tick,
     reset,
     setDuration,
   } = useGameStore()
 
-  const [mistakeIndices, setMistakeIndices] = useState<Set<number>>(() => new Set())
   const [countdown, setCountdown] = useState(3)
   const inputRef = useRef<HTMLInputElement>(null)
   const hasInitializedRef = useRef(false)
@@ -56,20 +57,26 @@ export function TypingTest({ onComplete }: TypingTestProps) {
 
   useEffect(() => {
     if (status === "countdown") {
+      setCountdown(3)
       const timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer)
-            startGame()
-            inputRef.current?.focus()
-            return 3
+            return 0
           }
           return prev - 1
         })
       }, 1000)
       return () => clearInterval(timer)
     }
-  }, [status, startGame])
+  }, [status])
+
+  useEffect(() => {
+    if (status === "countdown" && countdown === 0) {
+      startGame()
+      inputRef.current?.focus()
+    }
+  }, [status, countdown, startGame])
 
   useEffect(() => {
     if (status === "playing") {
@@ -88,25 +95,22 @@ export function TypingTest({ onComplete }: TypingTestProps) {
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (status !== "playing") return
 
-      if (e.key.length === 1) {
-        const expectedChar = text[currentIndex]
-        if (e.key !== expectedChar) {
-          setMistakeIndices((prev) => new Set([...prev, currentIndex]))
-        }
+      if (e.key === "Backspace") {
+        e.preventDefault()
+        deleteChar()
+      } else if (e.key.length === 1) {
         typeChar(e.key)
       }
     },
-    [status, text, currentIndex, typeChar]
+    [status, typeChar, deleteChar]
   )
 
   const handleStart = () => {
-    setCountdown(3)
     startCountdown()
   }
 
   const handleRestart = () => {
     reset()
-    setMistakeIndices(new Set())
     setText(generateTextForDuration(duration))
   }
 
@@ -191,7 +195,7 @@ export function TypingTest({ onComplete }: TypingTestProps) {
             <WordDisplay
               text={text}
               currentIndex={currentIndex}
-              mistakes={mistakeIndices}
+              charResults={charResults}
             />
 
             <input
