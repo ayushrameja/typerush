@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useCallback, useRef } from "react"
+import { useEffect, useCallback, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { useGameStore } from "@/lib/stores/gameStore"
 
@@ -23,7 +23,12 @@ export function TypingScreen({ onComplete }: TypingScreenProps) {
   } = useGameStore()
 
   const inputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const cursorSpanRef = useRef<HTMLSpanElement>(null)
   const wpmIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const scrollOffsetRef = useRef(0)
+  
+  const [scrollOffset, setScrollOffset] = useState(0)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -51,6 +56,27 @@ export function TypingScreen({ onComplete }: TypingScreenProps) {
     }
   }, [status, onComplete])
 
+  useEffect(() => {
+    if (!cursorSpanRef.current || !containerRef.current) return
+
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const cursorRect = cursorSpanRef.current.getBoundingClientRect()
+    
+    const containerWidth = containerRect.width
+    const targetPosition = containerWidth * 0.2
+    
+    const cursorVisualLeft = cursorRect.left - containerRect.left
+    const cursorOriginalLeft = cursorVisualLeft + scrollOffsetRef.current
+
+    const progress = currentIndex / text.length
+
+    if (progress < 0.95 && cursorVisualLeft > targetPosition) {
+      const newOffset = cursorOriginalLeft - targetPosition
+      scrollOffsetRef.current = newOffset
+      setScrollOffset(newOffset)
+    }
+  }, [currentIndex, text.length])
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (status !== "playing") return
@@ -64,36 +90,6 @@ export function TypingScreen({ onComplete }: TypingScreenProps) {
     },
     [status, typeChar, deleteChar]
   )
-
-  const words = text.split(" ")
-  let charCount = 0
-  let currentWordIndex = 0
-  
-  for (let i = 0; i < words.length; i++) {
-    const wordEnd = charCount + words[i].length
-    if (currentIndex >= charCount && currentIndex <= wordEnd) {
-      currentWordIndex = i
-      break
-    }
-    charCount += words[i].length + 1
-  }
-
-  const startWordIndex = Math.max(0, currentWordIndex - 1)
-  let startChar = 0
-  for (let i = 0; i < startWordIndex; i++) {
-    startChar += words[i].length + 1
-  }
-
-  let visibleWords: string[] = []
-  let totalChars = 0
-  const targetChars = 180
-  
-  for (let i = startWordIndex; i < words.length && totalChars < targetChars; i++) {
-    visibleWords.push(words[i])
-    totalChars += words[i].length + 1
-  }
-  
-  const visibleText = visibleWords.join(" ")
 
   const progress = (currentIndex / text.length) * 100
   const timeProgress = ((duration - timeLeft) / duration) * 100
@@ -115,44 +111,43 @@ export function TypingScreen({ onComplete }: TypingScreenProps) {
         {formatTime(timeLeft)}
       </div>
 
-      <div className="flex-1 flex items-center justify-center py-16 overflow-hidden">
-        <div className="max-w-4xl w-full">
-          <motion.div 
-            key={startWordIndex}
-            initial={{ x: 20 }}
-            animate={{ x: 0 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-4xl md:text-5xl font-mono leading-relaxed tracking-wide"
+      <div className="flex-1 flex items-center py-16">
+        <div ref={containerRef} className="w-full overflow-hidden">
+          <div 
+            style={{ transform: `translateX(-${scrollOffset}px)` }}
+            className="text-4xl md:text-5xl font-mono tracking-wide whitespace-nowrap transition-transform duration-150 ease-out"
           >
-            {visibleText.split("").map((char, localIndex) => {
-              const globalIndex = startChar + localIndex
+            {text.split("").map((char, index) => {
               let charStatus: "pending" | "correct" | "incorrect" | "current" = "pending"
 
-              if (globalIndex < currentIndex) {
-                charStatus = charResults[globalIndex] ? "correct" : "incorrect"
-              } else if (globalIndex === currentIndex) {
+              if (index < currentIndex) {
+                charStatus = charResults[index] ? "correct" : "incorrect"
+              } else if (index === currentIndex) {
                 charStatus = "current"
               }
 
+              const isCursor = charStatus === "current"
+
               return (
                 <span
-                  key={globalIndex}
+                  key={index}
+                  ref={isCursor ? cursorSpanRef : null}
                   className={`
-                    relative inline transition-colors duration-75
+                    relative
                     ${charStatus === "pending" ? "text-[#444]" : ""}
                     ${charStatus === "correct" ? "text-white" : ""}
                     ${charStatus === "incorrect" ? "text-red-500" : ""}
                     ${charStatus === "current" ? "text-[#888]" : ""}
                   `}
                 >
-                  {charStatus === "current" && (
+                  {isCursor && (
                     <span className="absolute -left-[2px] top-[10%] w-[3px] h-[80%] bg-white typing-cursor" />
                   )}
                   {char === " " ? "\u00A0" : char}
                 </span>
               )
             })}
-          </motion.div>
+          </div>
         </div>
       </div>
 
