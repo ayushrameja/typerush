@@ -3,7 +3,7 @@
 import { create } from "zustand"
 
 export type GameMode = "solo" | "multiplayer"
-export type GameStatus = "idle" | "countdown" | "playing" | "finished"
+export type GameStatus = "idle" | "countdown" | "playing" | "paused" | "finished"
 
 export interface WpmDataPoint {
   time: number
@@ -26,6 +26,8 @@ interface GameState {
   streak: number
   maxStreak: number
   startTime: number | null
+  pausedTime: number
+  pauseStartTime: number | null
   wpmHistory: WpmDataPoint[]
   totalWords: number
   totalChars: number
@@ -35,6 +37,8 @@ interface GameState {
   setText: (text: string) => void
   startGame: () => void
   startCountdown: () => void
+  pauseGame: () => void
+  resumeGame: () => void
   typeChar: (char: string) => void
   deleteChar: () => void
   tick: () => void
@@ -59,21 +63,26 @@ export const useGameStore = create<GameState>((set, get) => ({
   streak: 0,
   maxStreak: 0,
   startTime: null,
+  pausedTime: 0,
+  pauseStartTime: null,
   wpmHistory: [],
   totalWords: 0,
   totalChars: 0,
 
   setMode: (mode) => set({ mode }),
-  setDuration: (duration) => set({ duration, timeLeft: duration }),
+  setDuration: (duration) => set({ duration, timeLeft: duration === 0 ? 0 : duration }),
   setText: (text) => set({ text }),
 
   startCountdown: () => set({ status: "countdown" }),
 
-  startGame: () =>
+  startGame: () => {
+    const duration = get().duration
     set({
       status: "playing",
       startTime: Date.now(),
-      timeLeft: get().duration,
+      pausedTime: 0,
+      pauseStartTime: null,
+      timeLeft: duration === 0 ? 0 : duration,
       typedText: "",
       currentIndex: 0,
       mistakes: 0,
@@ -86,7 +95,31 @@ export const useGameStore = create<GameState>((set, get) => ({
       wpmHistory: [],
       totalWords: 0,
       totalChars: 0,
-    }),
+    })
+  },
+
+  pauseGame: () => {
+    const state = get()
+    if (state.status === "playing") {
+      set({ 
+        status: "paused",
+        pauseStartTime: Date.now()
+      })
+    }
+  },
+
+  resumeGame: () => {
+    const state = get()
+    if (state.status === "paused" && state.pauseStartTime) {
+      const pauseDuration = Date.now() - state.pauseStartTime
+      set({ 
+        status: "playing",
+        startTime: state.startTime ? state.startTime + pauseDuration : Date.now(),
+        pausedTime: state.pausedTime + pauseDuration,
+        pauseStartTime: null
+      })
+    }
+  },
 
   typeChar: (char) => {
     const state = get()
@@ -158,11 +191,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get()
     if (state.status !== "playing") return
 
-    const newTimeLeft = state.timeLeft - 1
-    if (newTimeLeft <= 0) {
-      get().endGame()
+    if (state.duration === 0) {
+      set({ timeLeft: state.timeLeft + 1 })
     } else {
-      set({ timeLeft: newTimeLeft })
+      const newTimeLeft = state.timeLeft - 1
+      if (newTimeLeft <= 0) {
+        get().endGame()
+      } else {
+        set({ timeLeft: newTimeLeft })
+      }
     }
   },
 
@@ -178,7 +215,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   endGame: () => {
     const state = get()
-    const finalTime = state.duration - state.timeLeft
+    const finalTime = state.duration === 0 ? state.timeLeft : state.duration - state.timeLeft
     set({ 
       status: "finished",
       wpmHistory: [...state.wpmHistory, { time: finalTime, wpm: state.wpm }]
@@ -199,6 +236,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       streak: 0,
       maxStreak: 0,
       startTime: null,
+      pausedTime: 0,
+      pauseStartTime: null,
       wpmHistory: [],
       totalWords: 0,
       totalChars: 0,

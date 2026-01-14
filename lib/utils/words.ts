@@ -105,6 +105,10 @@ export function generateText(wordCount: number = 50, difficulty: Difficulty = 'm
 }
 
 export function generateTextForDuration(durationSeconds: number, difficulty: Difficulty = 'medium'): string {
+  if (durationSeconds === 0) {
+    return generateText(100, difficulty)
+  }
+
   const avgWPM = difficulty === 'beginner' ? 30 : 
                  difficulty === 'easy' ? 40 : 
                  difficulty === 'medium' ? 50 : 

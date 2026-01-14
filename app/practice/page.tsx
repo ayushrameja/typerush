@@ -1,26 +1,33 @@
-"use client"
+'use client';
 
-import { useState, useCallback } from "react"
-import Link from "next/link"
-import { motion, AnimatePresence } from "framer-motion"
-import { SelectionScreen } from "@/components/practice/SelectionScreen"
-import { CountdownScreen } from "@/components/practice/CountdownScreen"
-import { TypingScreen } from "@/components/practice/TypingScreen"
-import { ResultsScreen } from "@/components/practice/ResultsScreen"
-import { useGameStore } from "@/lib/stores/gameStore"
-import { generateTextForDuration, Difficulty } from "@/lib/utils/words"
-import { createClient } from "@/lib/supabase/client"
-import { useUserStore } from "@/lib/stores/userStore"
-import type { Stats } from "@/lib/supabase/database.types"
+import { useState, useCallback } from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  SelectionScreen,
+  PracticeSettings,
+} from '@/components/practice/SelectionScreen';
+import { CountdownScreen } from '@/components/practice/CountdownScreen';
+import { TypingScreen } from '@/components/practice/TypingScreen';
+import { ResultsScreen } from '@/components/practice/ResultsScreen';
+import { useGameStore } from '@/lib/stores/gameStore';
+import { generateTextForDuration, Difficulty } from '@/lib/utils/words';
+import { createClient } from '@/lib/supabase/client';
+import { useUserStore } from '@/lib/stores/userStore';
+import type { Stats } from '@/lib/supabase/database.types';
 
-type FlowState = "selection" | "countdown" | "typing" | "results"
+type FlowState = 'selection' | 'countdown' | 'typing' | 'results';
 
 export default function PracticePage() {
-  const [flowState, setFlowState] = useState<FlowState>("selection")
-  const [selectedDuration, setSelectedDuration] = useState(60)
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("medium")
+  const [flowState, setFlowState] = useState<FlowState>('selection');
+  const [settings, setSettings] = useState<PracticeSettings>({
+    duration: 60,
+    difficulty: 'medium',
+    stopOnError: false,
+    soundEnabled: true,
+  });
 
-  const { user, stats, setStats } = useUserStore()
+  const { user, stats, setStats } = useUserStore();
   const {
     wpm,
     accuracy,
@@ -34,66 +41,68 @@ export default function PracticePage() {
     setDuration,
     startGame,
     reset,
-  } = useGameStore()
+  } = useGameStore();
 
-  const handleStartSelection = useCallback((dur: number, diff: Difficulty) => {
-    setSelectedDuration(dur)
-    setSelectedDifficulty(diff)
-    setDuration(dur)
-    setText(generateTextForDuration(dur, diff))
-    setFlowState("countdown")
-  }, [setDuration, setText])
+  const handleStartSelection = useCallback(
+    (newSettings: PracticeSettings) => {
+      setSettings(newSettings);
+      setDuration(newSettings.duration);
+      setText(generateTextForDuration(newSettings.duration, newSettings.difficulty));
+      setFlowState('countdown');
+    },
+    [setDuration, setText]
+  );
 
   const handleCountdownComplete = useCallback(() => {
-    startGame()
-    setFlowState("typing")
-  }, [startGame])
+    startGame();
+    setFlowState('typing');
+  }, [startGame]);
 
   const handleTypingComplete = useCallback(async () => {
-    setFlowState("results")
+    setFlowState('results');
 
     if (user && stats) {
-      const supabase = createClient()
-      const newTotalRaces = stats.total_races + 1
+      const supabase = createClient();
+      const newTotalRaces = stats.total_races + 1;
       const newAvgWpm = Math.round(
         (stats.avg_wpm * stats.total_races + wpm) / newTotalRaces
-      )
-      const newBestWpm = Math.max(stats.best_wpm, wpm)
+      );
+      const newBestWpm = Math.max(stats.best_wpm, wpm);
       const newAccuracy = Math.round(
         (stats.accuracy * stats.total_races + accuracy) / newTotalRaces
-      )
+      );
 
       const { data, error } = await supabase
-        .from("stats")
+        .from('stats')
         .update({
           avg_wpm: newAvgWpm,
           best_wpm: newBestWpm,
           total_races: newTotalRaces,
           accuracy: newAccuracy,
         })
-        .eq("user_id", user.id)
+        .eq('user_id', user.id)
         .select()
-        .single()
+        .single();
 
       if (!error && data) {
-        setStats(data as Stats)
+        setStats(data as Stats);
       }
     }
-  }, [user, stats, wpm, accuracy, setStats])
+  }, [user, stats, wpm, accuracy, setStats]);
 
   const handleTryAgain = useCallback(() => {
-    reset()
-    setText(generateTextForDuration(selectedDuration, selectedDifficulty))
-    setFlowState("countdown")
-  }, [reset, setText, selectedDuration, selectedDifficulty])
+    reset();
+    setText(generateTextForDuration(settings.duration, settings.difficulty));
+    setFlowState('countdown');
+  }, [reset, setText, settings.duration, settings.difficulty]);
 
   const handleChangeSettings = useCallback(() => {
-    reset()
-    setFlowState("selection")
-  }, [reset])
+    reset();
+    setFlowState('selection');
+  }, [reset]);
 
-  const text = useGameStore((state) => state.text)
-  const timeUsed = duration - timeLeft
+  const text = useGameStore((state) => state.text);
+  const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
 
   return (
     <div className="min-h-screen py-8 px-4">
@@ -125,14 +134,11 @@ export default function PracticePage() {
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {flowState === "selection" && (
-            <SelectionScreen 
-              key="selection"
-              onStart={handleStartSelection} 
-            />
+          {flowState === 'selection' && (
+            <SelectionScreen key="selection" onStart={handleStartSelection} />
           )}
 
-          {flowState === "countdown" && (
+          {flowState === 'countdown' && (
             <CountdownScreen
               key="countdown"
               previewText={text}
@@ -140,14 +146,16 @@ export default function PracticePage() {
             />
           )}
 
-          {flowState === "typing" && (
-            <TypingScreen 
+          {flowState === 'typing' && (
+            <TypingScreen
               key="typing"
-              onComplete={handleTypingComplete} 
+              stopOnError={settings.stopOnError}
+              soundEnabled={settings.soundEnabled}
+              onComplete={handleTypingComplete}
             />
           )}
 
-          {flowState === "results" && (
+          {flowState === 'results' && (
             <ResultsScreen
               key="results"
               wpm={wpm}
@@ -165,5 +173,5 @@ export default function PracticePage() {
         </AnimatePresence>
       </div>
     </div>
-  )
+  );
 }
