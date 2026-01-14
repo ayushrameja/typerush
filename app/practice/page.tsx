@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GridBackground } from '@/components/home/GridBackground';
 import {
   SelectionScreen,
   PracticeSettings,
@@ -11,7 +11,7 @@ import { CountdownScreen } from '@/components/practice/CountdownScreen';
 import { TypingScreen } from '@/components/practice/TypingScreen';
 import { ResultsScreen } from '@/components/practice/ResultsScreen';
 import { useGameStore } from '@/lib/stores/gameStore';
-import { generateTextForDuration, Difficulty } from '@/lib/utils/words';
+import { generateTextForDuration } from '@/lib/utils/words';
 import { createClient } from '@/lib/supabase/client';
 import { useUserStore } from '@/lib/stores/userStore';
 import type { Stats } from '@/lib/supabase/database.types';
@@ -105,72 +105,49 @@ export default function PracticePage() {
   const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-8"
-        >
-          <Link
-            href="/"
-            className="inline-flex items-center text-[#888] hover:text-white transition-colors text-sm"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+    <div className="relative min-h-screen">
+      <GridBackground />
+      <div className="relative min-h-screen px-4 pt-24 pb-24">
+        <div className="max-w-5xl mx-auto">
+          <AnimatePresence mode="wait">
+            {flowState === 'selection' && (
+              <SelectionScreen key="selection" onStart={handleStartSelection} />
+            )}
+
+            {flowState === 'countdown' && (
+              <CountdownScreen
+                key="countdown"
+                previewText={text}
+                onComplete={handleCountdownComplete}
               />
-            </svg>
-            Back to Home
-          </Link>
-        </motion.div>
+            )}
 
-        <AnimatePresence mode="wait">
-          {flowState === 'selection' && (
-            <SelectionScreen key="selection" onStart={handleStartSelection} />
-          )}
+            {flowState === 'typing' && (
+              <TypingScreen
+                key="typing"
+                stopOnError={settings.stopOnError}
+                soundEnabled={settings.soundEnabled}
+                onComplete={handleTypingComplete}
+              />
+            )}
 
-          {flowState === 'countdown' && (
-            <CountdownScreen
-              key="countdown"
-              previewText={text}
-              onComplete={handleCountdownComplete}
-            />
-          )}
-
-          {flowState === 'typing' && (
-            <TypingScreen
-              key="typing"
-              stopOnError={settings.stopOnError}
-              soundEnabled={settings.soundEnabled}
-              onComplete={handleTypingComplete}
-            />
-          )}
-
-          {flowState === 'results' && (
-            <ResultsScreen
-              key="results"
-              wpm={wpm}
-              accuracy={accuracy}
-              duration={duration}
-              timeUsed={timeUsed}
-              totalChars={totalChars}
-              totalWords={totalWords}
-              mistakes={mistakes}
-              wpmHistory={wpmHistory}
-              onTryAgain={handleTryAgain}
-              onChangeSettings={handleChangeSettings}
-            />
-          )}
-        </AnimatePresence>
+            {flowState === 'results' && (
+              <ResultsScreen
+                key="results"
+                wpm={wpm}
+                accuracy={accuracy}
+                duration={duration}
+                timeUsed={timeUsed}
+                totalChars={totalChars}
+                totalWords={totalWords}
+                mistakes={mistakes}
+                wpmHistory={wpmHistory}
+                onTryAgain={handleTryAgain}
+                onChangeSettings={handleChangeSettings}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
