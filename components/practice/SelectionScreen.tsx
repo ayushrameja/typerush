@@ -90,7 +90,6 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
     >
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-          <span className="h-2 w-2 rounded-full bg-[#50e3c2]" />
           Configure match
         </div>
         <h1 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight text-white">
@@ -101,21 +100,21 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
         </p>
       </div>
 
-      <div className="glass-panel rounded-3xl p-5 md:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-5">
+      <div className="glass-panel rounded-[32px] p-6 md:p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-3">
+              <label className="block text-sm font-medium text-white/60 mb-4">
                 Duration
               </label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-5 gap-3">
                 {durations.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDuration(d)}
-                    className={`py-3 rounded-xl text-sm font-medium transition-all border ${
+                    className={`py-3 rounded-2xl text-sm font-medium transition-all border ${
                       duration === d
-                        ? 'bg-white text-black border-white'
+                        ? 'bg-[#f5a524] text-black border-[#f5a524]'
                         : 'bg-transparent text-white/60 border-white/10 hover:border-white/20 hover:text-white'
                     }`}
                   >
@@ -126,17 +125,17 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-3">
+              <label className="block text-sm font-medium text-white/60 mb-4">
                 Difficulty
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {difficulties.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}
-                    className={`w-full p-4 rounded-2xl text-left transition-all border ${
+                    className={`w-full p-5 rounded-3xl text-left transition-all border ${
                       difficulty === d
-                        ? 'bg-white/5 border-white/20'
+                        ? 'bg-white/5 border-[#f5a524]/60'
                         : 'bg-transparent border-white/10 hover:border-white/20'
                     }`}
                   >
@@ -154,7 +153,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
                         </div>
                       </div>
                       {difficulty === d && (
-                        <div className="w-2 h-2 rounded-full bg-white shrink-0" />
+                        <div className="w-2 h-2 rounded-full bg-[#f5a524] shrink-0" />
                       )}
                     </div>
                   </button>
@@ -163,18 +162,18 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
             </div>
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-3">
+              <label className="block text-sm font-medium text-white/60 mb-4">
                 Options
               </label>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   onClick={() => setStopOnError(!stopOnError)}
-                  className={`w-full p-4 rounded-2xl text-left transition-all border flex items-center justify-between gap-4 ${
+                  className={`w-full p-5 rounded-3xl text-left transition-all border flex items-center justify-between gap-4 ${
                     stopOnError
-                      ? 'bg-white/5 border-white/20'
+                      ? 'bg-white/5 border-[#f5a524]/60'
                       : 'bg-transparent border-white/10 hover:border-white/20'
                   }`}
                 >
@@ -192,7 +191,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
                   </div>
                   <div
                     className={`w-10 h-6 rounded-full transition-colors shrink-0 ${
-                      stopOnError ? 'bg-white' : 'bg-white/10'
+                      stopOnError ? 'bg-[#f5a524]' : 'bg-white/10'
                     }`}
                   >
                     <div
@@ -205,9 +204,9 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
 
                 <button
                   onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`w-full p-4 rounded-2xl text-left transition-all border flex items-center justify-between gap-4 ${
+                  className={`w-full p-5 rounded-3xl text-left transition-all border flex items-center justify-between gap-4 ${
                     soundEnabled
-                      ? 'bg-white/5 border-white/20'
+                      ? 'bg-white/5 border-[#f5a524]/60'
                       : 'bg-transparent border-white/10 hover:border-white/20'
                   }`}
                 >
@@ -225,7 +224,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
                   </div>
                   <div
                     className={`w-10 h-6 rounded-full transition-colors shrink-0 ${
-                      soundEnabled ? 'bg-white' : 'bg-white/10'
+                      soundEnabled ? 'bg-[#f5a524]' : 'bg-white/10'
                     }`}
                   >
                     <div
@@ -238,7 +237,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="text-white/60 text-xs">Ready</div>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <div className="text-white/80 text-sm">
@@ -250,7 +249,7 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
               </div>
               <button
                 onClick={handleStart}
-                className="mt-4 w-full py-3 bg-white text-black font-medium rounded-2xl hover:bg-white/90 transition-colors"
+                className="mt-4 w-full py-3 bg-[#f5a524] text-black font-medium rounded-2xl hover:bg-[#f7b64a] transition-colors"
               >
                 Start Practice
               </button>
@@ -259,26 +258,6 @@ export function SelectionScreen({ onStart }: SelectionScreenProps) {
         </div>
       </div>
 
-      <div className="fixed bottom-5 left-0 right-0 z-40 px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="glass-panel rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-white/60 text-xs">Loadout</div>
-              <div className="text-white/80 text-sm truncate">
-                {durationLabel} · <span className="capitalize">{difficulty}</span>
-                {stopOnError ? ' · stop-on-error' : ''}
-                {soundEnabled ? ' · sound' : ' · silent'}
-              </div>
-            </div>
-            <button
-              onClick={handleStart}
-              className="shrink-0 px-5 py-2.5 rounded-xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
-            >
-              Start
-            </button>
-          </div>
-        </div>
-      </div>
     </motion.div>
   );
 }

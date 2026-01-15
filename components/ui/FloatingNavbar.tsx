@@ -3,17 +3,62 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useUserStore } from '@/lib/stores/userStore';
 import { useGameStore } from '@/lib/stores/gameStore';
 
-type NavItem = { href: string; label: string; shortcut?: string };
+type NavItem = {
+  href: string;
+  label: string;
+  shortcut?: string;
+  icon: JSX.Element;
+};
 
 const navItems: NavItem[] = [
-  { href: '/', label: 'Home' },
-  { href: '/practice', label: 'Practice', shortcut: 'P' },
-  { href: '/leaderboard', label: 'Leaderboard', shortcut: 'L' },
+  {
+    href: '/',
+    label: 'Home',
+    shortcut: 'H',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <path
+          d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+      </svg>
+    ),
+  },
+  {
+    href: '/practice',
+    label: 'Practice',
+    shortcut: 'P',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <path
+          d="M6 19a9 9 0 1 1 12 0"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+    ),
+  },
+  {
+    href: '/leaderboard',
+    label: 'Leaderboard',
+    shortcut: 'L',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <path
+          d="M7 21V10h4v11H7Zm6 0V3h4v18h-4Z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+      </svg>
+    ),
+  },
 ];
 
 export function FloatingNavbar() {
@@ -24,11 +69,6 @@ export function FloatingNavbar() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
-  const navContainerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
-  const [spotlight, setSpotlight] = useState<{ x: number; w: number } | null>(
-    null
-  );
 
   const shortcutsDisabled = useMemo(() => {
     return gameStatus === 'playing' || gameStatus === 'paused';
@@ -79,211 +119,177 @@ export function FloatingNavbar() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [router, shortcutsDisabled]);
 
-  useEffect(() => {
-    const container = navContainerRef.current;
-    if (!container) return;
-
-    const update = () => {
-      const targetHref = hoveredHref ?? activeHref;
-      const el = itemRefs.current[targetHref];
-      if (!el) return;
-      setSpotlight({ x: el.offsetLeft, w: el.offsetWidth });
-    };
-
-    update();
-
-    const ro = new ResizeObserver(() => update());
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [hoveredHref, activeHref]);
 
   if (isHiddenRoute) return null;
 
   return (
-    <div className="fixed top-5 left-0 right-0 z-50 pointer-events-none">
-      <div className="max-w-6xl mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="pointer-events-auto mx-auto w-full"
-        >
-          <div className="glass-panel rounded-2xl px-3 py-2">
-            <div className="flex items-center justify-between gap-3">
-              <Link
-                href="/"
-                className="flex items-center gap-2 px-2 py-1 rounded-xl hover:bg-white/5 transition-colors"
-              >
-                <span className="text-white font-semibold tracking-tight">TypeRush</span>
-                <span className="text-[11px] text-white/50 border border-white/10 rounded-full px-2 py-[2px]">
-                  lobby
-                </span>
-              </Link>
+    <div className="fixed top-6 left-0 right-0 z-50">
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="mx-auto flex max-w-6xl items-center justify-between px-4"
+      >
+        <Link href="/" className="flex items-center gap-2 text-white">
+          <span className="text-2xl font-semibold" style={{ fontFamily: 'Stardom, sans-serif' }}>
+            TypeRush
+          </span>
+        </Link>
 
+        <div className="hidden md:flex items-center gap-3 rounded-full border border-white/10 bg-black/70 px-3 py-2 backdrop-blur-xl">
+          {navItems.map((item) => {
+            const isActive = activeHref === item.href;
+            const isHovered = hoveredHref === item.href;
+            return (
               <div
-                ref={navContainerRef}
-                className="hidden md:flex items-center gap-1 relative"
+                key={item.href}
+                className="relative"
+                onMouseEnter={() => setHoveredHref(item.href)}
+                onMouseLeave={() => setHoveredHref(null)}
               >
-                <div className="absolute inset-0 pointer-events-none">
-                  <AnimatePresence>
-                    {spotlight && (
-                      <motion.div
-                        layoutId="navSpotlight"
-                        className="absolute top-0 bottom-0 rounded-xl bg-white/5 border border-white/10"
-                        style={{
-                          x: spotlight.x,
-                          width: spotlight.w,
-                        }}
-                        transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                      />
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {navItems.map((item) => {
-                  const isActive = activeHref === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onMouseEnter={() => setHoveredHref(item.href)}
-                      onMouseLeave={() => setHoveredHref(null)}
-                      ref={(el) => {
-                        itemRefs.current[item.href] = el;
-                      }}
-                      className={`relative z-10 flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${
-                        isActive ? 'text-white' : 'text-white/70 hover:text-white'
-                      }`}
+                <Link
+                  href={item.href}
+                  className={`flex items-center justify-center h-10 w-10 rounded-2xl border transition-colors ${
+                    isActive
+                      ? 'border-[#f5a524] text-[#f5a524] bg-white/5'
+                      : 'border-white/10 text-white/70 hover:text-white hover:border-white/20'
+                  }`}
+                >
+                  {item.icon}
+                </Link>
+                <AnimatePresence>
+                  {isHovered && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      className="absolute left-1/2 -translate-x-1/2 -top-9 whitespace-nowrap rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[11px] text-white/70"
                     >
-                      <span>{item.label}</span>
-                      {item.shortcut && (
-                        <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
-                          {item.shortcut}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="hidden md:flex items-center gap-2">
-                  {!isLoading && user ? (
-                    <>
-                      <Link
-                        href="/profile"
-                        className="px-3 py-2 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        {profile?.username || 'Profile'}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="px-3 py-2 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Logout
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href="/login"
-                        className="px-3 py-2 rounded-xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                      >
-                        Login
-                      </Link>
-                      <Link
-                        href="/signup"
-                        className="px-3 py-2 rounded-xl text-sm bg-white text-black hover:bg-white/90 transition-colors"
-                      >
-                        Sign up
-                      </Link>
-                    </>
+                      {item.label}
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
 
+        <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
+            {!isLoading && user ? (
+              <>
+                <Link
+                  href="/profile"
+                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  {profile?.username || 'Profile'}
+                </Link>
                 <button
                   type="button"
-                  onClick={() => setMobileOpen((v) => !v)}
-                  className="md:hidden px-3 py-2 rounded-xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                  aria-label="Open menu"
+                  onClick={handleLogout}
+                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                 >
-                  Menu
+                  Logout
                 </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-2 rounded-2xl text-sm bg-white text-black hover:bg-white/90 transition-colors"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="md:hidden px-3 py-2 rounded-2xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+            aria-label="Open menu"
+          >
+            Menu
+          </button>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="md:hidden mt-4 px-4"
+          >
+            <div className="glass-panel rounded-3xl p-3">
+              <div className="flex flex-col gap-2">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <span>{item.label}</span>
+                    {item.shortcut && (
+                      <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
+                        {item.shortcut}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+                <div className="h-px bg-white/10 my-1" />
+                {!isLoading && user ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setMobileOpen(false)}
+                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      {profile?.username || 'Profile'}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        void handleLogout();
+                      }}
+                      className="text-left rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => setMobileOpen(false)}
+                      className="rounded-2xl px-3 py-2 text-sm bg-white text-black hover:bg-white/90 transition-colors"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
-
-            <AnimatePresence>
-              {mobileOpen && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="md:hidden overflow-hidden"
-                >
-                  <div className="pt-2 pb-1 border-t border-white/10 mt-2">
-                    <div className="flex flex-col">
-                      {navItems.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() => setMobileOpen(false)}
-                          className="flex items-center justify-between px-3 py-2 rounded-xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                        >
-                          <span>{item.label}</span>
-                          {item.shortcut && (
-                            <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
-                              {item.shortcut}
-                            </span>
-                          )}
-                        </Link>
-                      ))}
-                      <div className="h-px bg-white/10 my-2" />
-                      {!isLoading && user ? (
-                        <>
-                          <Link
-                            href="/profile"
-                            onClick={() => setMobileOpen(false)}
-                            className="px-3 py-2 rounded-xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                          >
-                            {profile?.username || 'Profile'}
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMobileOpen(false);
-                              void handleLogout();
-                            }}
-                            className="text-left px-3 py-2 rounded-xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                          >
-                            Logout
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <Link
-                            href="/login"
-                            onClick={() => setMobileOpen(false)}
-                            className="px-3 py-2 rounded-xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                          >
-                            Login
-                          </Link>
-                          <Link
-                            href="/signup"
-                            onClick={() => setMobileOpen(false)}
-                            className="px-3 py-2 rounded-xl text-sm bg-white text-black hover:bg-white/90 transition-colors"
-                          >
-                            Sign up
-                          </Link>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function PlayerCard({ username, isGuest, bestWpm, avgWpm }: PlayerCardPro
   const ry = useSpring(ryRaw, { stiffness: 260, damping: 22, mass: 0.6 });
 
   const label = useMemo(() => {
-    if (isGuest) return 'Guest';
+    if (isGuest) return 'Rookie';
     return username || 'Player';
   }, [isGuest, username]);
 
@@ -60,7 +60,7 @@ export function PlayerCard({ username, isGuest, bestWpm, avgWpm }: PlayerCardPro
         className="transform-style-3d relative mx-auto w-[340px] sm:w-[420px] rounded-3xl glass-panel overflow-hidden"
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.08),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(0,112,243,0.12),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(245,165,36,0.14),transparent_60%)]" />
 
         <div className="relative p-6">
           <div className="flex items-center justify-between">
@@ -101,10 +101,7 @@ export function PlayerCard({ username, isGuest, bestWpm, avgWpm }: PlayerCardPro
             <div className="text-white/60 text-xs">
               Press <span className="text-white/80">P</span> to practice
             </div>
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#50e3c2]" />
-              <span className="text-white/60 text-xs">Ready</span>
-            </div>
+            <div className="text-white/60 text-xs">Ready</div>
           </div>
         </div>
       </motion.div>

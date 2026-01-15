@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GridBackground } from '@/components/home/GridBackground';
 import {
@@ -19,6 +19,7 @@ import type { Stats } from '@/lib/supabase/database.types';
 type FlowState = 'selection' | 'countdown' | 'typing' | 'results';
 
 export default function PracticePage() {
+  const [isBooting, setIsBooting] = useState(true);
   const [flowState, setFlowState] = useState<FlowState>('selection');
   const [settings, setSettings] = useState<PracticeSettings>({
     duration: 60,
@@ -104,10 +105,28 @@ export default function PracticePage() {
   const text = useGameStore((state) => state.text);
   const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsBooting(false), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isBooting) {
+    return (
+      <div className="relative min-h-screen">
+        <GridBackground />
+        <div className="relative min-h-screen px-4 pt-28 pb-20">
+          <div className="max-w-5xl mx-auto">
+            <PracticeSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen">
       <GridBackground />
-      <div className="relative min-h-screen px-4 pt-24 pb-24">
+      <div className="relative min-h-screen px-4 pt-28 pb-20">
         <div className="max-w-5xl mx-auto">
           <AnimatePresence mode="wait">
             {flowState === 'selection' && (
@@ -147,6 +166,45 @@ export default function PracticePage() {
               />
             )}
           </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PracticeSkeleton() {
+  return (
+    <div className="animate-pulse space-y-8">
+      <div className="text-center space-y-3">
+        <div className="mx-auto h-6 w-32 rounded-full bg-white/10" />
+        <div className="mx-auto h-10 w-48 rounded-full bg-white/10" />
+        <div className="mx-auto h-4 w-40 rounded-full bg-white/5" />
+      </div>
+      <div className="glass-panel rounded-3xl p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="grid grid-cols-5 gap-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-10 rounded-xl bg-white/10" />
+              ))}
+            </div>
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-16 rounded-2xl bg-white/5" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div key={index} className="h-20 rounded-2xl bg-white/5" />
+              ))}
+            </div>
+            <div className="h-20 rounded-2xl bg-white/10" />
+          </div>
         </div>
       </div>
     </div>
