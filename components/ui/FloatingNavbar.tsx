@@ -1,18 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useUserStore } from '@/lib/stores/userStore';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useGameStore } from '@/lib/stores/gameStore';
 
 type NavItem = {
   href: string;
   label: string;
   shortcut?: string;
-  icon: JSX.Element;
+  icon: ReactNode;
+  disabled?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -49,6 +48,7 @@ const navItems: NavItem[] = [
     href: '/leaderboard',
     label: 'Leaderboard',
     shortcut: 'L',
+    disabled: true,
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
         <path
@@ -63,8 +63,6 @@ const navItems: NavItem[] = [
 
 export function FloatingNavbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const { user, profile, isLoading } = useUserStore();
   const gameStatus = useGameStore((s) => s.status);
 
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -87,12 +85,6 @@ export function FloatingNavbar() {
     return exact?.href ?? (pathname.startsWith('/leaderboard') ? '/leaderboard' : '/');
   }, [pathname]);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.refresh();
-  };
-
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -110,14 +102,13 @@ export function FloatingNavbar() {
       if (isEditable) return;
 
       const key = e.key.toLowerCase();
-      if (key === 'p') router.push('/practice');
-      if (key === 'l') router.push('/leaderboard');
-      if (key === 'h') router.push('/');
+      if (key === 'p') window.location.href = '/practice';
+      if (key === 'h') window.location.href = '/';
       if (key === 'escape') setMobileOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router, shortcutsDisabled]);
+  }, [shortcutsDisabled]);
 
 
   if (isHiddenRoute) return null;
@@ -140,6 +131,37 @@ export function FloatingNavbar() {
           {navItems.map((item) => {
             const isActive = activeHref === item.href;
             const isHovered = hoveredHref === item.href;
+            const isDisabled = item.disabled;
+            
+            if (isDisabled) {
+              return (
+                <div
+                  key={item.href}
+                  className="relative"
+                  onMouseEnter={() => setHoveredHref(item.href)}
+                  onMouseLeave={() => setHoveredHref(null)}
+                >
+                  <div
+                    className="flex items-center justify-center h-10 w-10 rounded-2xl border border-white/5 text-white/30 cursor-not-allowed"
+                  >
+                    {item.icon}
+                  </div>
+                  <AnimatePresence>
+                    {isHovered && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        className="absolute left-1/2 -translate-x-1/2 -top-9 whitespace-nowrap rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[11px] text-white/50"
+                      >
+                        {item.label} (Coming soon)
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+            
             return (
               <div
                 key={item.href}
@@ -176,38 +198,20 @@ export function FloatingNavbar() {
 
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-2">
-            {!isLoading && user ? (
-              <>
-                <Link
-                  href="/profile"
-                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  {profile?.username || 'Profile'}
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-2xl text-sm text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/signup"
-                  className="px-4 py-2 rounded-2xl text-sm bg-white text-black hover:bg-white/90 transition-colors"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
+            <button
+              type="button"
+              disabled
+              className="px-4 py-2 rounded-2xl text-sm text-white/30 cursor-not-allowed"
+            >
+              Login
+            </button>
+            <button
+              type="button"
+              disabled
+              className="px-4 py-2 rounded-2xl text-sm bg-white/20 text-white/40 cursor-not-allowed"
+            >
+              Sign up
+            </button>
           </div>
 
           <button
@@ -231,60 +235,40 @@ export function FloatingNavbar() {
           >
             <div className="glass-panel rounded-3xl p-3">
               <div className="flex flex-col gap-2">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    <span>{item.label}</span>
-                    {item.shortcut && (
-                      <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
-                        {item.shortcut}
-                      </span>
-                    )}
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  if (item.disabled) {
+                    return (
+                      <div
+                        key={item.href}
+                        className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed"
+                      >
+                        <span>{item.label} (Coming soon)</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      <span>{item.label}</span>
+                      {item.shortcut && (
+                        <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
+                          {item.shortcut}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
                 <div className="h-px bg-white/10 my-1" />
-                {!isLoading && user ? (
-                  <>
-                    <Link
-                      href="/profile"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      {profile?.username || 'Profile'}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileOpen(false);
-                        void handleLogout();
-                      }}
-                      className="text-left rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/login"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      Login
-                    </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-2xl px-3 py-2 text-sm bg-white text-black hover:bg-white/90 transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </>
-                )}
+                <div className="rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed">
+                  Login (Coming soon)
+                </div>
+                <div className="rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed">
+                  Sign up (Coming soon)
+                </div>
               </div>
             </div>
           </motion.div>
@@ -293,4 +277,3 @@ export function FloatingNavbar() {
     </div>
   );
 }
-

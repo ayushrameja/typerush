@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { GridBackground } from '@/components/home/GridBackground';
 import {
   SelectionScreen,
@@ -12,9 +12,6 @@ import { TypingScreen } from '@/components/practice/TypingScreen';
 import { ResultsScreen } from '@/components/practice/ResultsScreen';
 import { useGameStore } from '@/lib/stores/gameStore';
 import { generateTextForDuration } from '@/lib/utils/words';
-import { createClient } from '@/lib/supabase/client';
-import { useUserStore } from '@/lib/stores/userStore';
-import type { Stats } from '@/lib/supabase/database.types';
 
 type FlowState = 'selection' | 'countdown' | 'typing' | 'results';
 
@@ -28,7 +25,6 @@ export default function PracticePage() {
     soundEnabled: true,
   });
 
-  const { user, stats, setStats } = useUserStore();
   const {
     wpm,
     accuracy,
@@ -59,37 +55,9 @@ export default function PracticePage() {
     setFlowState('typing');
   }, [startGame]);
 
-  const handleTypingComplete = useCallback(async () => {
+  const handleTypingComplete = useCallback(() => {
     setFlowState('results');
-
-    if (user && stats) {
-      const supabase = createClient();
-      const newTotalRaces = stats.total_races + 1;
-      const newAvgWpm = Math.round(
-        (stats.avg_wpm * stats.total_races + wpm) / newTotalRaces
-      );
-      const newBestWpm = Math.max(stats.best_wpm, wpm);
-      const newAccuracy = Math.round(
-        (stats.accuracy * stats.total_races + accuracy) / newTotalRaces
-      );
-
-      const { data, error } = await supabase
-        .from('stats')
-        .update({
-          avg_wpm: newAvgWpm,
-          best_wpm: newBestWpm,
-          total_races: newTotalRaces,
-          accuracy: newAccuracy,
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (!error && data) {
-        setStats(data as Stats);
-      }
-    }
-  }, [user, stats, wpm, accuracy, setStats]);
+  }, []);
 
   const handleTryAgain = useCallback(() => {
     reset();
