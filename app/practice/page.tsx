@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { GridBackground } from '@/components/home/GridBackground';
 import {
   SelectionScreen,
   PracticeSettings,
@@ -11,14 +11,12 @@ import { CountdownScreen } from '@/components/practice/CountdownScreen';
 import { TypingScreen } from '@/components/practice/TypingScreen';
 import { ResultsScreen } from '@/components/practice/ResultsScreen';
 import { useGameStore } from '@/lib/stores/gameStore';
-import { generateTextForDuration, Difficulty } from '@/lib/utils/words';
-import { createClient } from '@/lib/supabase/client';
-import { useUserStore } from '@/lib/stores/userStore';
-import type { Stats } from '@/lib/supabase/database.types';
+import { generateTextForDuration } from '@/lib/utils/words';
 
 type FlowState = 'selection' | 'countdown' | 'typing' | 'results';
 
 export default function PracticePage() {
+  const [isBooting, setIsBooting] = useState(true);
   const [flowState, setFlowState] = useState<FlowState>('selection');
   const [settings, setSettings] = useState<PracticeSettings>({
     duration: 60,
@@ -27,7 +25,6 @@ export default function PracticePage() {
     soundEnabled: true,
   });
 
-  const { user, stats, setStats } = useUserStore();
   const {
     wpm,
     accuracy,
@@ -58,37 +55,9 @@ export default function PracticePage() {
     setFlowState('typing');
   }, [startGame]);
 
-  const handleTypingComplete = useCallback(async () => {
+  const handleTypingComplete = useCallback(() => {
     setFlowState('results');
-
-    if (user && stats) {
-      const supabase = createClient();
-      const newTotalRaces = stats.total_races + 1;
-      const newAvgWpm = Math.round(
-        (stats.avg_wpm * stats.total_races + wpm) / newTotalRaces
-      );
-      const newBestWpm = Math.max(stats.best_wpm, wpm);
-      const newAccuracy = Math.round(
-        (stats.accuracy * stats.total_races + accuracy) / newTotalRaces
-      );
-
-      const { data, error } = await supabase
-        .from('stats')
-        .update({
-          avg_wpm: newAvgWpm,
-          best_wpm: newBestWpm,
-          total_races: newTotalRaces,
-          accuracy: newAccuracy,
-        })
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (!error && data) {
-        setStats(data as Stats);
-      }
-    }
-  }, [user, stats, wpm, accuracy, setStats]);
+  }, []);
 
   const handleTryAgain = useCallback(() => {
     reset();
@@ -104,73 +73,107 @@ export default function PracticePage() {
   const text = useGameStore((state) => state.text);
   const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
 
+  useEffect(() => {
+    const timer = setTimeout(() => setIsBooting(false), 350);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isBooting) {
+    return (
+      <div className="relative min-h-screen">
+        <GridBackground />
+        <div className="relative min-h-screen px-4 pt-28 pb-20">
+          <div className="max-w-5xl mx-auto">
+            <PracticeSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-8"
-        >
-          <Link
-            href="/"
-            className="inline-flex items-center text-[#888] hover:text-white transition-colors text-sm"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+    <div className="relative min-h-screen">
+      <GridBackground />
+      <div className="relative min-h-screen px-4 pt-28 pb-20">
+        <div className="max-w-5xl mx-auto">
+          <AnimatePresence mode="wait">
+            {flowState === 'selection' && (
+              <SelectionScreen key="selection" onStart={handleStartSelection} />
+            )}
+
+            {flowState === 'countdown' && (
+              <CountdownScreen
+                key="countdown"
+                previewText={text}
+                onComplete={handleCountdownComplete}
               />
-            </svg>
-            Back to Home
-          </Link>
-        </motion.div>
+            )}
 
-        <AnimatePresence mode="wait">
-          {flowState === 'selection' && (
-            <SelectionScreen key="selection" onStart={handleStartSelection} />
-          )}
+            {flowState === 'typing' && (
+              <TypingScreen
+                key="typing"
+                stopOnError={settings.stopOnError}
+                soundEnabled={settings.soundEnabled}
+                onComplete={handleTypingComplete}
+              />
+            )}
 
-          {flowState === 'countdown' && (
-            <CountdownScreen
-              key="countdown"
-              previewText={text}
-              onComplete={handleCountdownComplete}
-            />
-          )}
+            {flowState === 'results' && (
+              <ResultsScreen
+                key="results"
+                wpm={wpm}
+                accuracy={accuracy}
+                duration={duration}
+                timeUsed={timeUsed}
+                totalChars={totalChars}
+                totalWords={totalWords}
+                mistakes={mistakes}
+                wpmHistory={wpmHistory}
+                onTryAgain={handleTryAgain}
+                onChangeSettings={handleChangeSettings}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          {flowState === 'typing' && (
-            <TypingScreen
-              key="typing"
-              stopOnError={settings.stopOnError}
-              soundEnabled={settings.soundEnabled}
-              onComplete={handleTypingComplete}
-            />
-          )}
-
-          {flowState === 'results' && (
-            <ResultsScreen
-              key="results"
-              wpm={wpm}
-              accuracy={accuracy}
-              duration={duration}
-              timeUsed={timeUsed}
-              totalChars={totalChars}
-              totalWords={totalWords}
-              mistakes={mistakes}
-              wpmHistory={wpmHistory}
-              onTryAgain={handleTryAgain}
-              onChangeSettings={handleChangeSettings}
-            />
-          )}
-        </AnimatePresence>
+function PracticeSkeleton() {
+  return (
+    <div className="animate-pulse space-y-8">
+      <div className="text-center space-y-3">
+        <div className="mx-auto h-6 w-32 rounded-full bg-white/10" />
+        <div className="mx-auto h-10 w-48 rounded-full bg-white/10" />
+        <div className="mx-auto h-4 w-40 rounded-full bg-white/5" />
+      </div>
+      <div className="glass-panel rounded-3xl p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="grid grid-cols-5 gap-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-10 rounded-xl bg-white/10" />
+              ))}
+            </div>
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="h-16 rounded-2xl bg-white/5" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="h-4 w-24 rounded-full bg-white/10" />
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <div key={index} className="h-20 rounded-2xl bg-white/5" />
+              ))}
+            </div>
+            <div className="h-20 rounded-2xl bg-white/10" />
+          </div>
+        </div>
       </div>
     </div>
   );
