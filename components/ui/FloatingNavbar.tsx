@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useAuthActions } from '@convex-dev/auth/react';
+import { useConvexAuth, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { useGameStore } from '@/lib/stores/gameStore';
 
 type NavItem = {
@@ -45,10 +48,20 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    href: '/history',
+    label: 'History',
+    shortcut: 'T',
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M12 7v5l3.5 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     href: '/leaderboard',
     label: 'Leaderboard',
     shortcut: 'L',
-    disabled: true,
     icon: (
       <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
         <path
@@ -64,6 +77,12 @@ const navItems: NavItem[] = [
 export function FloatingNavbar() {
   const pathname = usePathname();
   const gameStatus = useGameStore((s) => s.status);
+  const { isAuthenticated } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const currentUser = useQuery(
+    api.users.currentUser,
+    isAuthenticated ? {} : 'skip'
+  );
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
@@ -82,7 +101,10 @@ export function FloatingNavbar() {
   const activeHref = useMemo(() => {
     if (!pathname) return '/';
     const exact = navItems.find((i) => i.href === pathname);
-    return exact?.href ?? (pathname.startsWith('/leaderboard') ? '/leaderboard' : '/');
+    if (exact) return exact.href;
+    if (pathname.startsWith('/history')) return '/history';
+    if (pathname.startsWith('/leaderboard')) return '/leaderboard';
+    return '/';
   }, [pathname]);
 
   useEffect(() => {
@@ -104,6 +126,8 @@ export function FloatingNavbar() {
       const key = e.key.toLowerCase();
       if (key === 'p') window.location.href = '/practice';
       if (key === 'h') window.location.href = '/';
+      if (key === 't') window.location.href = '/history';
+      if (key === 'l') window.location.href = '/leaderboard';
       if (key === 'escape') setMobileOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -112,6 +136,8 @@ export function FloatingNavbar() {
 
 
   if (isHiddenRoute) return null;
+
+  const displayName = currentUser?.name ?? currentUser?.email ?? 'Player';
 
   return (
     <div className="fixed top-6 left-0 right-0 z-50">
@@ -198,20 +224,37 @@ export function FloatingNavbar() {
 
         <div className="flex items-center gap-2">
           <div className="hidden md:flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              className="px-4 py-2 rounded-2xl text-sm text-white/30 cursor-not-allowed"
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              disabled
-              className="px-4 py-2 rounded-2xl text-sm bg-white/20 text-white/40 cursor-not-allowed"
-            >
-              Sign up
-            </button>
+            {isAuthenticated && currentUser ? (
+              <>
+                <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
+                  <span className="text-sm text-white/80">
+                    {displayName}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className="px-4 py-2 rounded-2xl text-sm bg-white/10 text-white/80 hover:bg-white/20 transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-2xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-2 rounded-2xl text-sm bg-white/20 text-white/90 hover:bg-white/30 transition-colors"
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -263,12 +306,35 @@ export function FloatingNavbar() {
                   );
                 })}
                 <div className="h-px bg-white/10 my-1" />
-                <div className="rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed">
-                  Login (Coming soon)
-                </div>
-                <div className="rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed">
-                  Sign up (Coming soon)
-                </div>
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileOpen(false);
+                      void signOut();
+                    }}
+                    className="text-left rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    Sign out
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileOpen(false)}
+                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/signup"
+                      onClick={() => setMobileOpen(false)}
+                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                    >
+                      Sign up
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

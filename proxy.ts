@@ -1,14 +1,7 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { updateSession } from "@/lib/supabase/middleware"
+import { NextResponse } from "next/server"
 
-export async function proxy(request: NextRequest) {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  ) {
-    return NextResponse.next()
-  }
-  return await updateSession(request)
+export function proxy() {
+  return NextResponse.next()
 }
 
 export const config = {

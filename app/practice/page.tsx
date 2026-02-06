@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { useMutation } from 'convex/react';
+import { useConvexAuth } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { GridBackground } from '@/components/home/GridBackground';
 import {
   SelectionScreen,
@@ -24,6 +27,10 @@ export default function PracticePage() {
     stopOnError: false,
     soundEnabled: true,
   });
+  const hasSavedRef = useRef(false);
+
+  const { isAuthenticated } = useConvexAuth();
+  const saveSession = useMutation(api.practice.saveSession);
 
   const {
     wpm,
@@ -45,6 +52,7 @@ export default function PracticePage() {
       setSettings(newSettings);
       setDuration(newSettings.duration);
       setText(generateTextForDuration(newSettings.duration, newSettings.difficulty));
+      hasSavedRef.current = false;
       setFlowState('countdown');
     },
     [setDuration, setText]
@@ -62,16 +70,34 @@ export default function PracticePage() {
   const handleTryAgain = useCallback(() => {
     reset();
     setText(generateTextForDuration(settings.duration, settings.difficulty));
+    hasSavedRef.current = false;
     setFlowState('countdown');
   }, [reset, setText, settings.duration, settings.difficulty]);
 
   const handleChangeSettings = useCallback(() => {
     reset();
+    hasSavedRef.current = false;
     setFlowState('selection');
   }, [reset]);
 
   const text = useGameStore((state) => state.text);
   const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
+
+  useEffect(() => {
+    if (flowState === 'results' && isAuthenticated && !hasSavedRef.current) {
+      hasSavedRef.current = true;
+      saveSession({
+        wpm,
+        accuracy,
+        duration,
+        timeUsed,
+        totalChars,
+        totalWords,
+        mistakes,
+        difficulty: settings.difficulty,
+      });
+    }
+  }, [flowState, isAuthenticated, saveSession, wpm, accuracy, duration, timeUsed, totalChars, totalWords, mistakes, settings.difficulty]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsBooting(false), 350);

@@ -1,10 +1,24 @@
 "use client"
 
+import { useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
+import { useAuthActions } from "@convex-dev/auth/react"
+import { useConvexAuth } from "convex/react"
 import { Card } from "@/components/ui/Card"
 
 export default function LoginPage() {
+  const router = useRouter()
+  const { isAuthenticated } = useConvexAuth()
+  const { signIn } = useAuthActions()
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/")
+    }
+  }, [router, isAuthenticated])
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="absolute inset-0 overflow-hidden">
@@ -21,26 +35,18 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <div className="text-6xl mb-4">🔐</div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
-              Login Coming Soon
+              Sign in
             </h1>
-            <p className="text-zinc-400 mt-2">
-              We&apos;re migrating to Convex for authentication
-            </p>
+            <p className="text-zinc-400 mt-2">Use Google to continue</p>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-sm text-white/70">
-                Authentication features are temporarily disabled while we migrate to Convex.
-              </div>
-            </div>
-
             <button
               type="button"
-              disabled
-              className="w-full py-4 rounded-2xl bg-white/20 text-white/40 font-medium cursor-not-allowed"
+              onClick={() => void signIn("google")}
+              className="w-full py-4 rounded-2xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
             >
-              Sign In (Coming Soon)
+              Continue with Google
             </button>
 
             <div className="relative my-6">
@@ -48,22 +54,20 @@ export default function LoginPage() {
                 <div className="w-full border-t border-zinc-800" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-zinc-900 text-zinc-500">
-                  in the meantime
-                </span>
+                <span className="px-4 bg-zinc-900 text-zinc-500">or</span>
               </div>
             </div>
 
             <Link
               href="/practice"
-              className="block w-full py-4 rounded-2xl bg-white text-black font-medium text-center hover:bg-white/90 transition-colors"
+              className="block w-full py-4 rounded-2xl bg-white/10 text-white font-medium text-center hover:bg-white/20 transition-colors"
             >
-              Try Practice Mode
+              Continue to Practice
             </Link>
           </div>
 
           <p className="text-center text-zinc-500 mt-6">
-            Practice mode works without an account!
+            Multiplayer requires a Google login.
           </p>
         </Card>
       </motion.div>

@@ -3,7 +3,10 @@
 import Link from 'next/link';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { useMemo, useRef } from 'react';
+import { useConvexAuth, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { GridBackground } from './GridBackground';
+import { useUserStore } from '@/lib/stores/userStore';
 
 function ValorantCard({
   mode,
@@ -89,6 +92,24 @@ function ValorantCard({
 }
 
 function PlayerCard() {
+  const user = useUserStore((state) => state.user);
+  const { isAuthenticated } = useConvexAuth();
+  const stats = useQuery(api.practice.getStats, isAuthenticated ? {} : 'skip');
+
+  const displayName = user?.name ?? 'Guest Player';
+  const subtitle = user ? 'Online' : 'Demo Mode';
+  const avatarContent = user?.avatarUrl ? (
+    <img
+      src={user.avatarUrl}
+      alt={displayName}
+      className="h-14 w-14 rounded-2xl object-cover"
+    />
+  ) : (
+    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-white/15 to-white/5 border border-white/15 flex items-center justify-center text-2xl text-white/90">
+      👤
+    </div>
+  );
+
   return (
     <motion.div
       whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
@@ -101,35 +122,41 @@ function PlayerCard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-white/15 to-white/5 border border-white/15 flex items-center justify-center text-2xl text-white/90">
-                👤
-              </div>
-              <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-black" />
+              {avatarContent}
+              <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-black ${user ? 'bg-emerald-500' : 'bg-zinc-500'}`} />
             </div>
             <div>
               <div className="text-lg font-semibold text-white tracking-tight">
-                Guest Player
+                {displayName}
               </div>
-              <div className="text-sm text-white/55">Demo Mode</div>
+              <div className="text-sm text-white/55">{subtitle}</div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-semibold text-white">—</div>
+            <div className="text-2xl font-semibold text-white">
+              {stats?.bestWpm ?? '—'}
+            </div>
             <div className="text-xs text-white/45">Best WPM</div>
           </div>
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">—</div>
+            <div className="text-lg font-semibold text-white">
+              {stats?.avgWpm ?? '—'}
+            </div>
             <div className="text-[11px] text-white/45">Avg WPM</div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">0</div>
-            <div className="text-[11px] text-white/45">Races</div>
+            <div className="text-lg font-semibold text-white">
+              {stats?.totalSessions ?? 0}
+            </div>
+            <div className="text-[11px] text-white/45">Sessions</div>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">—</div>
+            <div className="text-lg font-semibold text-white">
+              {stats?.accuracy ? `${stats.accuracy}%` : '—'}
+            </div>
             <div className="text-[11px] text-white/45">Accuracy</div>
           </div>
         </div>
@@ -139,7 +166,7 @@ function PlayerCard() {
 }
 
 export function HeroLobby() {
-  const lobbyPlayers = 1;
+  const user = useUserStore((state) => state.user);
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4">
@@ -153,9 +180,9 @@ export function HeroLobby() {
           className="text-center"
         >
           <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
-            Demo mode
+            {user ? 'Ready to race' : 'Demo mode'}
             <span className="text-white/40">•</span>
-            Practice available
+            {user ? 'Multiplayer & Practice' : 'Practice available'}
           </div>
 
           <h1 className="mt-6 text-5xl md:text-6xl font-semibold tracking-tight text-white">
@@ -192,23 +219,27 @@ export function HeroLobby() {
             <PlayerCard />
 
             <div className="mt-8 flex items-center gap-4">
-              <button
-                type="button"
-                disabled
-                className="px-8 py-4 rounded-2xl bg-white/20 text-white/40 font-medium tracking-tight cursor-not-allowed"
-              >
-                Login to start
-              </button>
+              {user ? (
+                <Link
+                  href="/race"
+                  className="px-8 py-4 rounded-2xl bg-white/20 text-white/90 font-medium tracking-tight hover:bg-white/30 transition-colors"
+                >
+                  Play Multiplayer
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="px-8 py-4 rounded-2xl bg-white/10 text-white/70 font-medium tracking-tight hover:bg-white/20 transition-colors"
+                >
+                  Sign in for Multiplayer
+                </Link>
+              )}
               <Link
                 href="/practice"
                 className="px-6 py-4 rounded-2xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
               >
                 Practice
               </Link>
-            </div>
-
-            <div className="mt-6 text-sm text-white/60">
-              <span className="text-[#f5a524]">Demo mode:</span> Login & multiplayer coming with Convex.
             </div>
           </motion.div>
 

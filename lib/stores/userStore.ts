@@ -1,16 +1,15 @@
 "use client"
 
 import { create } from "zustand"
-import type { User } from "@supabase/supabase-js"
-import type { Profile, Stats } from "@/lib/supabase/database.types"
+import type { AppUser, Profile, Stats } from "@/lib/types/user"
 
 interface UserState {
-  user: User | null
+  user: AppUser | null
   profile: Profile | null
   stats: Stats | null
   isLoading: boolean
 
-  setUser: (user: User | null) => void
+  setUser: (user: AppUser | null) => void
   setProfile: (profile: Profile | null) => void
   setStats: (stats: Stats | null) => void
   setLoading: (loading: boolean) => void

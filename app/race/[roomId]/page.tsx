@@ -1,304 +1,287 @@
 "use client"
 
-import { useEffect, useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { createClient } from "@/lib/supabase/client"
+import { useMutation, useQuery } from "convex/react"
+import { api } from "@/convex/_generated/api"
+import type { Id } from "@/convex/_generated/dataModel"
 import { useUserStore } from "@/lib/stores/userStore"
-import { useRaceStore } from "@/lib/stores/raceStore"
-import { useRealtime } from "@/lib/hooks/useRealtime"
 import { RaceScene } from "@/components/race/RaceScene"
 import { RaceUI } from "@/components/race/RaceUI"
 import { calculateProgress } from "@/lib/utils/calculateStats"
-import type { Lobby, Profile } from "@/lib/supabase/database.types"
+
+const defaultPlayerProgress = {
+  userId: "",
+  username: "",
+  progress: 0,
+  wpm: 0,
+  mistakes: 0,
+  finished: false,
+}
 
 export default function RaceRoomPage() {
   const params = useParams()
   const router = useRouter()
   const roomId = params.roomId as string
+  const lobbyId = roomId as Id<"lobbies">
 
-  const { user, profile } = useUserStore()
-  const {
-    status,
-    countdown,
-    timeLeft,
-    textToType,
-    hostProgress,
-    guestProgress,
-    isHost,
-    setLobbyId,
-    setRoomCode,
-    setTextToType,
-    setStatus,
-    setCountdown,
-    setTimeLeft,
-    setIsHost,
-    updateHostProgress,
-    updateGuestProgress,
-    reset,
-  } = useRaceStore()
+  const { user, isLoading } = useUserStore()
 
-  const {
-    broadcastProgress,
-    broadcastGameStart,
-    broadcastCountdown,
-    broadcastTimerTick,
-    broadcastGameEnd,
-  } = useRealtime(roomId)
+  const lobby = useQuery(api.lobbies.getLobby, roomId ? { lobbyId } : "skip")
 
-  const [lobby, setLobby] = useState<Lobby | null>(null)
+  const startRace = useMutation(api.lobbies.startRace)
+  const setCountdownRemote = useMutation(api.lobbies.setCountdown)
+  const setTimeLeftRemote = useMutation(api.lobbies.setTimeLeft)
+  const updatePlayerProgressRemote = useMutation(api.lobbies.updatePlayerProgress)
+  const finishRace = useMutation(api.lobbies.finishRace)
+
   const [currentIndex, setCurrentIndex] = useState(0)
   const [mistakes, setMistakes] = useState(0)
   const [correctChars, setCorrectChars] = useState(0)
   const [streak, setStreak] = useState(0)
   const [wpm, setWpm] = useState(0)
   const [isMistake, setIsMistake] = useState(false)
+
   const startTimeRef = useRef<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const countdownIntervalRef = useRef<number | null>(null)
+  const timerIntervalRef = useRef<number | null>(null)
+
+  const clearRaceIntervals = useCallback(() => {
+    if (countdownIntervalRef.current !== null) {
+      window.clearInterval(countdownIntervalRef.current)
+      countdownIntervalRef.current = null
+    }
+
+    if (timerIntervalRef.current !== null) {
+      window.clearInterval(timerIntervalRef.current)
+      timerIntervalRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
-    if (!user) {
+    if (!isLoading && !user) {
       router.push("/login")
+    }
+  }, [isLoading, user, router])
+
+  useEffect(() => {
+    return () => {
+      clearRaceIntervals()
+    }
+  }, [clearRaceIntervals])
+
+  const status = lobby?.status ?? "waiting"
+  const countdown = lobby?.countdown ?? 3
+  const timeLeft = lobby?.timeLeft ?? 60
+  const textToType = lobby?.textToType ?? ""
+  const isHost = !!user && !!lobby && lobby.hostId === user.id
+
+  const hostProgress = lobby?.hostProgress ?? {
+    ...defaultPlayerProgress,
+    username: "Player 1",
+  }
+
+  const guestProgress = lobby?.guestProgress
+
+  useEffect(() => {
+    if (status === "racing") {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now()
+      }
+      inputRef.current?.focus()
+    }
+
+    if (status === "finished") {
+      clearRaceIntervals()
+    }
+  }, [status, clearRaceIntervals])
+
+  const startGame = useCallback(async () => {
+    if (!isHost || !user || !lobby) {
       return
     }
 
-    const supabase = createClient()
+    clearRaceIntervals()
+    setCurrentIndex(0)
+    setMistakes(0)
+    setCorrectChars(0)
+    setStreak(0)
+    setWpm(0)
+    setIsMistake(false)
+    startTimeRef.current = null
 
-    const fetchLobby = async () => {
-      const { data } = await supabase
-        .from("lobbies")
-        .select("*")
-        .eq("id", roomId)
-        .single()
+    const startResult = await startRace({
+      lobbyId: lobby._id,
+      actorId: user.id,
+    })
 
-      const lobbyData = data as Lobby | null
-
-      if (lobbyData) {
-        setLobby(lobbyData)
-        setLobbyId(lobbyData.id)
-        setRoomCode(lobbyData.room_code)
-        setTextToType(lobbyData.text_to_type)
-        setIsHost(lobbyData.host_id === user.id)
-
-        if (lobbyData.host_id === user.id) {
-          updateHostProgress({
-            id: user.id,
-            username: profile?.username || "Player 1",
-          })
-        } else {
-          updateGuestProgress({
-            id: user.id,
-            username: profile?.username || "Player 2",
-          })
-        }
-      }
+    if (!startResult.ok) {
+      return
     }
-
-    fetchLobby()
-
-    const channel = supabase
-      .channel(`lobby:${roomId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "lobbies",
-          filter: `id=eq.${roomId}`,
-        },
-        async (payload) => {
-          const updatedLobby = payload.new as Lobby
-          setLobby(updatedLobby)
-
-          if (updatedLobby.guest_id && updatedLobby.host_id) {
-            const { data: guestProfileData } = await supabase
-              .from("profiles")
-              .select("username")
-              .eq("id", updatedLobby.guest_id)
-              .single()
-
-            const { data: hostProfileData } = await supabase
-              .from("profiles")
-              .select("username")
-              .eq("id", updatedLobby.host_id)
-              .single()
-
-            const guestProfile = guestProfileData as Pick<Profile, "username"> | null
-            const hostProfile = hostProfileData as Pick<Profile, "username"> | null
-
-            updateHostProgress({
-              id: updatedLobby.host_id,
-              username: hostProfile?.username || "Player 1",
-            })
-            updateGuestProgress({
-              id: updatedLobby.guest_id,
-              username: guestProfile?.username || "Player 2",
-            })
-
-            if (status === "idle") {
-              setStatus("waiting")
-            }
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      channel.unsubscribe()
-      reset()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId, user, router, profile])
-
-  useEffect(() => {
-    if (lobby?.guest_id && lobby?.host_id && status === "idle") {
-      setStatus("waiting")
-    }
-  }, [lobby, status, setStatus])
-
-  const startGame = useCallback(() => {
-    if (!isHost) return
-
-    setStatus("countdown")
-    broadcastGameStart()
 
     let count = 3
-    const countdownInterval = setInterval(() => {
-      count--
-      setCountdown(count)
-      broadcastCountdown(count)
+    countdownIntervalRef.current = window.setInterval(() => {
+      count -= 1
 
-      if (count === 0) {
-        clearInterval(countdownInterval)
-        setStatus("racing")
-        startTimeRef.current = Date.now()
-        inputRef.current?.focus()
+      void setCountdownRemote({
+        lobbyId: lobby._id,
+        actorId: user.id,
+        count,
+      })
+
+      if (count <= 0) {
+        if (countdownIntervalRef.current !== null) {
+          window.clearInterval(countdownIntervalRef.current)
+          countdownIntervalRef.current = null
+        }
 
         let time = 60
-        const timerInterval = setInterval(() => {
-          time--
-          setTimeLeft(time)
-          broadcastTimerTick(time)
+        timerIntervalRef.current = window.setInterval(() => {
+          time -= 1
 
-          if (time <= 0) {
-            clearInterval(timerInterval)
-            setStatus("finished")
-            broadcastGameEnd()
+          void setTimeLeftRemote({
+            lobbyId: lobby._id,
+            actorId: user.id,
+            timeLeft: time,
+          })
+
+          if (time <= 0 && timerIntervalRef.current !== null) {
+            window.clearInterval(timerIntervalRef.current)
+            timerIntervalRef.current = null
           }
         }, 1000)
       }
     }, 1000)
-  }, [
-    isHost,
-    setStatus,
-    setCountdown,
-    setTimeLeft,
-    broadcastGameStart,
-    broadcastCountdown,
-    broadcastTimerTick,
-    broadcastGameEnd,
-  ])
+  }, [clearRaceIntervals, isHost, lobby, setCountdownRemote, setTimeLeftRemote, startRace, user])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (status !== "racing") return
+      if (!user || !lobby || status !== "racing") {
+        return
+      }
 
-      if (e.key.length === 1) {
-        const expectedChar = textToType[currentIndex]
-        const isCorrect = e.key === expectedChar
+      if (e.key.length !== 1) {
+        return
+      }
 
-        if (isCorrect) {
-          const newCorrectChars = correctChars + 1
-          const newIndex = currentIndex + 1
-          const newStreak = streak + 1
+      const expectedChar = textToType[currentIndex]
+      if (!expectedChar) {
+        return
+      }
 
-          setCorrectChars(newCorrectChars)
-          setCurrentIndex(newIndex)
-          setStreak(newStreak)
-          setIsMistake(false)
+      const isCorrect = e.key === expectedChar
 
-          const elapsedMinutes = (Date.now() - startTimeRef.current!) / 60000
-          const wordsTyped = newCorrectChars / 5
-          const newWpm =
-            elapsedMinutes > 0 ? Math.round(wordsTyped / elapsedMinutes) : 0
-          setWpm(newWpm)
+      if (!isCorrect) {
+        setMistakes((prev) => prev + 1)
+        setStreak(0)
+        setIsMistake(true)
+        setTimeout(() => setIsMistake(false), 200)
+        return
+      }
 
-          const progress = calculateProgress(newIndex, textToType.length)
-          const finished = newIndex >= textToType.length
+      const newCorrectChars = correctChars + 1
+      const newIndex = currentIndex + 1
+      const newStreak = streak + 1
+      const elapsedMinutes = (Date.now() - (startTimeRef.current ?? Date.now())) / 60000
+      const wordsTyped = newCorrectChars / 5
+      const newWpm = elapsedMinutes > 0 ? Math.round(wordsTyped / elapsedMinutes) : 0
+      const progress = calculateProgress(newIndex, textToType.length)
+      const finished = newIndex >= textToType.length
 
-          if (isHost) {
-            updateHostProgress({
-              progress,
-              wpm: newWpm,
-              mistakes,
-              finished,
-            })
-          } else {
-            updateGuestProgress({
-              progress,
-              wpm: newWpm,
-              mistakes,
-              finished,
-            })
-          }
+      setCorrectChars(newCorrectChars)
+      setCurrentIndex(newIndex)
+      setStreak(newStreak)
+      setIsMistake(false)
+      setWpm(newWpm)
 
-          broadcastProgress(progress, newWpm, mistakes, finished)
+      void updatePlayerProgressRemote({
+        lobbyId: lobby._id,
+        playerId: user.id,
+        progress,
+        wpm: newWpm,
+        mistakes,
+        finished,
+      })
 
-          if (finished) {
-            setStatus("finished")
-            broadcastGameEnd()
-          }
-        } else {
-          setMistakes((prev) => prev + 1)
-          setStreak(0)
-          setIsMistake(true)
-
-          setTimeout(() => setIsMistake(false), 200)
-        }
+      if (finished) {
+        clearRaceIntervals()
+        void finishRace({
+          lobbyId: lobby._id,
+          actorId: user.id,
+        })
       }
     },
     [
-      status,
-      textToType,
-      currentIndex,
+      clearRaceIntervals,
       correctChars,
-      streak,
+      currentIndex,
+      finishRace,
+      lobby,
       mistakes,
-      isHost,
-      updateHostProgress,
-      updateGuestProgress,
-      broadcastProgress,
-      broadcastGameEnd,
-      setStatus,
+      status,
+      streak,
+      textToType,
+      updatePlayerProgressRemote,
+      user,
     ]
   )
 
   const getWinner = () => {
     if (hostProgress.progress >= 100) return hostProgress.username
-    if (guestProgress.progress >= 100) return guestProgress.username
-    if (hostProgress.wpm > guestProgress.wpm) return hostProgress.username
-    if (guestProgress.wpm > hostProgress.wpm) return guestProgress.username
+    if (guestProgress?.progress && guestProgress.progress >= 100) {
+      return guestProgress.username
+    }
+    if (hostProgress.wpm > (guestProgress?.wpm ?? 0)) return hostProgress.username
+    if ((guestProgress?.wpm ?? 0) > hostProgress.wpm) return guestProgress?.username
     return hostProgress.username
   }
 
   const handleRestart = () => {
+    clearRaceIntervals()
     router.push("/race")
+  }
+
+  if (lobby === undefined) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-zinc-950">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
+          className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full"
+        />
+      </div>
+    )
+  }
+
+  if (lobby === null) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-zinc-950 px-4">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-zinc-300 mb-2">Room not found</p>
+          <p className="text-zinc-500 mb-6">This race room does not exist anymore.</p>
+          <button
+            onClick={() => router.push("/race")}
+            className="px-6 py-3 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 transition-colors"
+          >
+            Back to Lobby
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-zinc-950">
       <div className="absolute top-4 left-4 z-50">
-        {lobby?.room_code && (
-          <div className="bg-zinc-900/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-zinc-800">
-            <p className="text-xs text-zinc-500">Room Code</p>
-            <p className="text-xl font-bold text-cyan-400 tracking-wider">
-              {lobby.room_code}
-            </p>
-          </div>
-        )}
+        <div className="bg-zinc-900/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-zinc-800">
+          <p className="text-xs text-zinc-500">Room Code</p>
+          <p className="text-xl font-bold text-cyan-400 tracking-wider">{lobby.roomCode}</p>
+        </div>
       </div>
 
-      {status === "waiting" && isHost && lobby?.guest_id && (
+      {status === "waiting" && isHost && lobby.guestId && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -316,7 +299,7 @@ export default function RaceRoomPage() {
       <div className="h-[60vh] w-full">
         <RaceScene
           player1={{
-            id: hostProgress.id,
+            id: hostProgress.userId,
             username: hostProgress.username || "Player 1",
             progress: hostProgress.progress,
             wpm: hostProgress.wpm,
@@ -324,9 +307,9 @@ export default function RaceRoomPage() {
             isMistake: isHost ? isMistake : false,
           }}
           player2={
-            guestProgress.id
+            guestProgress?.userId
               ? {
-                  id: guestProgress.id,
+                  id: guestProgress.userId,
                   username: guestProgress.username || "Player 2",
                   progress: guestProgress.progress,
                   wpm: guestProgress.wpm,
@@ -339,11 +322,7 @@ export default function RaceRoomPage() {
         />
 
         <RaceUI
-          status={
-            status === "idle"
-              ? "waiting"
-              : (status as "waiting" | "countdown" | "racing" | "finished")
-          }
+          status={status}
           countdown={countdown}
           timeLeft={timeLeft}
           player1={{
@@ -352,7 +331,7 @@ export default function RaceRoomPage() {
             wpm: hostProgress.wpm,
           }}
           player2={
-            guestProgress.id
+            guestProgress?.userId
               ? {
                   username: guestProgress.username || "Player 2",
                   progress: guestProgress.progress,
@@ -394,15 +373,13 @@ export default function RaceRoomPage() {
             />
 
             {status === "racing" && (
-              <p className="text-center text-zinc-500 text-sm mt-4">
-                Start typing to race!
-              </p>
+              <p className="text-center text-zinc-500 text-sm mt-4">Start typing to race!</p>
             )}
           </div>
         </div>
       )}
 
-      {status === "idle" && !lobby?.guest_id && (
+      {status === "waiting" && !lobby.guestId && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
             <motion.div
@@ -410,14 +387,9 @@ export default function RaceRoomPage() {
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-6"
             />
-            <p className="text-2xl font-bold text-zinc-300 mb-2">
-              Waiting for opponent...
-            </p>
+            <p className="text-2xl font-bold text-zinc-300 mb-2">Waiting for opponent...</p>
             <p className="text-zinc-500">
-              Share the room code:{" "}
-              <span className="text-cyan-400 font-bold">
-                {lobby?.room_code}
-              </span>
+              Share the room code: <span className="text-cyan-400 font-bold">{lobby.roomCode}</span>
             </p>
           </div>
         </div>

@@ -4,23 +4,28 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
+import { useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { Card } from "@/components/ui/Card"
-import { createClient } from "@/lib/supabase/client"
 import { useUserStore } from "@/lib/stores/userStore"
-import { generateRoomCode } from "@/lib/utils/calculateStats"
 import { generateTextForDuration } from "@/lib/utils/words"
-import type { Lobby } from "@/lib/supabase/database.types"
 
 export default function RaceLobbyPage() {
   const router = useRouter()
-  const { user } = useUserStore()
+  const { user, profile } = useUserStore()
   const [joinCode, setJoinCode] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [isJoining, setIsJoining] = useState(false)
   const [isFindingMatch, setIsFindingMatch] = useState(false)
   const [error, setError] = useState("")
+
+  const createLobby = useMutation(api.lobbies.createLobby)
+  const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode)
+  const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch)
+
+  const getUsername = () => profile?.username || "Player"
 
   const handleCreateRoom = async () => {
     if (!user) {
@@ -31,28 +36,21 @@ export default function RaceLobbyPage() {
     setIsCreating(true)
     setError("")
 
-    const supabase = createClient()
-    const roomCode = generateRoomCode()
-    const textToType = generateTextForDuration(60)
-
-    const { data, error: createError } = await supabase
-      .from("lobbies")
-      .insert({
-        host_id: user.id,
-        room_code: roomCode,
-        text_to_type: textToType,
-        status: "waiting" as const,
+    try {
+      const textToType = generateTextForDuration(60)
+      const result = await createLobby({
+        hostId: user.id,
+        username: getUsername(),
+        textToType,
       })
-      .select()
-      .single()
 
-    if (createError || !data) {
+      router.push(`/race/${result.lobbyId}?host=true`)
+    } catch (createError) {
+      console.error(createError)
       setError("Failed to create room. Please try again.")
+    } finally {
       setIsCreating(false)
-      return
     }
-
-    router.push(`/race/${(data as Lobby).id}?host=true`)
   }
 
   const handleJoinRoom = async () => {
@@ -69,35 +67,25 @@ export default function RaceLobbyPage() {
     setIsJoining(true)
     setError("")
 
-    const supabase = createClient()
+    try {
+      const result = await joinLobbyByCode({
+        userId: user.id,
+        username: getUsername(),
+        roomCode: joinCode,
+      })
 
-    const { data: lobbyData, error: findError } = await supabase
-      .from("lobbies")
-      .select("*")
-      .eq("room_code", joinCode.toUpperCase())
-      .eq("status", "waiting")
-      .single()
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
 
-    const lobby = lobbyData as Lobby | null
-
-    if (findError || !lobby) {
-      setError("Room not found or already started")
-      setIsJoining(false)
-      return
-    }
-
-    const { error: joinError } = await supabase
-      .from("lobbies")
-      .update({ guest_id: user.id })
-      .eq("id", lobby.id)
-
-    if (joinError) {
+      router.push(`/race/${result.lobbyId}`)
+    } catch (joinError) {
+      console.error(joinError)
       setError("Failed to join room")
+    } finally {
       setIsJoining(false)
-      return
     }
-
-    router.push(`/race/${lobby.id}`)
   }
 
   const handleFindMatch = async () => {
@@ -109,56 +97,25 @@ export default function RaceLobbyPage() {
     setIsFindingMatch(true)
     setError("")
 
-    const supabase = createClient()
-
-    const { data: existingLobbiesData } = await supabase
-      .from("lobbies")
-      .select("*")
-      .eq("status", "waiting")
-      .is("guest_id", null)
-      .neq("host_id", user.id)
-      .order("created_at", { ascending: true })
-      .limit(1)
-
-    const existingLobbies = existingLobbiesData as Lobby[] | null
-
-    if (existingLobbies && existingLobbies.length > 0) {
-      const lobby = existingLobbies[0]
-
-      const { error: joinError } = await supabase
-        .from("lobbies")
-        .update({ guest_id: user.id })
-        .eq("id", lobby.id)
-
-      if (!joinError) {
-        router.push(`/race/${lobby.id}`)
-        return
-      }
-    }
-
-    const roomCode = generateRoomCode()
-    const textToType = generateTextForDuration(60)
-
-    const { data: newLobbyData, error: createError } = await supabase
-      .from("lobbies")
-      .insert({
-        host_id: user.id,
-        room_code: roomCode,
-        text_to_type: textToType,
-        status: "waiting" as const,
+    try {
+      const textToType = generateTextForDuration(60)
+      const result = await findOrCreateMatch({
+        userId: user.id,
+        username: getUsername(),
+        textToType,
       })
-      .select()
-      .single()
 
-    const newLobby = newLobbyData as Lobby | null
-
-    if (createError || !newLobby) {
+      if (result.role === "host") {
+        router.push(`/race/${result.lobbyId}?host=true&matchmaking=true`)
+      } else {
+        router.push(`/race/${result.lobbyId}`)
+      }
+    } catch (matchError) {
+      console.error(matchError)
       setError("Failed to find match. Please try again.")
+    } finally {
       setIsFindingMatch(false)
-      return
     }
-
-    router.push(`/race/${newLobby.id}?host=true&matchmaking=true`)
   }
 
   return (
