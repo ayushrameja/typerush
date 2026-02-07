@@ -1,122 +1,122 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { useMutation } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Card } from "@/components/ui/Card"
-import { useUserStore } from "@/lib/stores/userStore"
-import { generateTextForDuration } from "@/lib/utils/words"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card } from "@/components/ui/Card";
+import { useUserStore } from "@/lib/stores/userStore";
+import { generateTextForDuration } from "@/lib/utils/words";
 
 export default function RaceLobbyPage() {
-  const router = useRouter()
-  const { user, profile } = useUserStore()
-  const [joinCode, setJoinCode] = useState("")
-  const [isCreating, setIsCreating] = useState(false)
-  const [isJoining, setIsJoining] = useState(false)
-  const [isFindingMatch, setIsFindingMatch] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const { user, profile } = useUserStore();
+  const [joinCode, setJoinCode] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isFindingMatch, setIsFindingMatch] = useState(false);
+  const [error, setError] = useState("");
 
-  const createLobby = useMutation(api.lobbies.createLobby)
-  const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode)
-  const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch)
+  const createLobby = useMutation(api.lobbies.createLobby);
+  const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode);
+  const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch);
 
-  const getUsername = () => profile?.username || "Player"
+  const getUsername = () => profile?.username || "Player";
 
   const handleCreateRoom = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push("/login");
+      return;
     }
 
-    setIsCreating(true)
-    setError("")
+    setIsCreating(true);
+    setError("");
 
     try {
-      const textToType = generateTextForDuration(60)
+      const textToType = generateTextForDuration(60);
       const result = await createLobby({
         hostId: user.id,
         username: getUsername(),
         textToType,
-      })
+      });
 
-      router.push(`/race/${result.lobbyId}?host=true`)
+      router.push(`/race/${result.lobbyId}?host=true`);
     } catch (createError) {
-      console.error(createError)
-      setError("Failed to create room. Please try again.")
+      console.error(createError);
+      setError("Failed to create room. Please try again.");
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const handleJoinRoom = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push("/login");
+      return;
     }
 
     if (!joinCode.trim()) {
-      setError("Please enter a room code")
-      return
+      setError("Please enter a room code");
+      return;
     }
 
-    setIsJoining(true)
-    setError("")
+    setIsJoining(true);
+    setError("");
 
     try {
       const result = await joinLobbyByCode({
         userId: user.id,
         username: getUsername(),
         roomCode: joinCode,
-      })
+      });
 
       if (!result.ok) {
-        setError(result.error)
-        return
+        setError(result.error);
+        return;
       }
 
-      router.push(`/race/${result.lobbyId}`)
+      router.push(`/race/${result.lobbyId}`);
     } catch (joinError) {
-      console.error(joinError)
-      setError("Failed to join room")
+      console.error(joinError);
+      setError("Failed to join room");
     } finally {
-      setIsJoining(false)
+      setIsJoining(false);
     }
-  }
+  };
 
   const handleFindMatch = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push("/login");
+      return;
     }
 
-    setIsFindingMatch(true)
-    setError("")
+    setIsFindingMatch(true);
+    setError("");
 
     try {
-      const textToType = generateTextForDuration(60)
+      const textToType = generateTextForDuration(60);
       const result = await findOrCreateMatch({
         userId: user.id,
         username: getUsername(),
         textToType,
-      })
+      });
 
       if (result.role === "host") {
-        router.push(`/race/${result.lobbyId}?host=true&matchmaking=true`)
+        router.push(`/race/${result.lobbyId}?host=true&matchmaking=true`);
       } else {
-        router.push(`/race/${result.lobbyId}`)
+        router.push(`/race/${result.lobbyId}`);
       }
     } catch (matchError) {
-      console.error(matchError)
-      setError("Failed to find match. Please try again.")
+      console.error(matchError);
+      setError("Failed to find match. Please try again.");
     } finally {
-      setIsFindingMatch(false)
+      setIsFindingMatch(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen py-12 px-4">
@@ -146,7 +146,7 @@ export default function RaceLobbyPage() {
             Back to Home
           </Link>
 
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
             1v1 Race
           </h1>
           <p className="text-zinc-500 mt-2">
@@ -264,5 +264,5 @@ export default function RaceLobbyPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
