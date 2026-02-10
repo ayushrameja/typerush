@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -13,47 +13,19 @@ import { UserAvatar } from "@/components/ui/UserAvatar";
 type MainNavItem = {
   href: string;
   label: string;
-  icon: ReactNode;
+  iconSrc: string;
 };
 
 const leftMainNav: MainNavItem[] = [
   {
     href: "/practice",
     label: "Practice",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-[17px] w-[17px]"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M10 19V5l10 7-10 7Z"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
-    ),
+    iconSrc: "/assets/icons/biceps.svg",
   },
   {
     href: "/history",
     label: "History",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-[17px] w-[17px]"
-        fill="none"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7" />
-        <path
-          d="M12 7v5l3.3 1.9"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    iconSrc: "/assets/icons/recent.svg",
   },
 ];
 
@@ -61,84 +33,68 @@ const rightMainNav: MainNavItem[] = [
   {
     href: "/leaderboard",
     label: "Leaderboard",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-[17px] w-[17px]"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M7 20V10h4v10H7Zm6 0V4h4v16h-4Z"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-      </svg>
-    ),
+    iconSrc: "/assets/icons/leadship.svg",
   },
   {
     href: "/collection",
     label: "Collection",
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-[17px] w-[17px]"
-        fill="none"
-        aria-hidden="true"
-      >
-        <rect
-          x="4"
-          y="4"
-          width="7"
-          height="7"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-        <rect
-          x="13"
-          y="4"
-          width="7"
-          height="7"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-        <rect
-          x="4"
-          y="13"
-          width="7"
-          height="7"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-        <rect
-          x="13"
-          y="13"
-          width="7"
-          height="7"
-          stroke="currentColor"
-          strokeWidth="1.7"
-        />
-      </svg>
-    ),
+    iconSrc: "/assets/icons/collection.svg",
   },
 ];
+
+const coreShellRoutes = [
+  "/",
+  "/practice",
+  "/history",
+  "/leaderboard",
+  "/collection",
+] as const;
 
 function isActivePath(pathname: string | null, href: string) {
   if (!pathname) return href === "/";
   if (href === "/") return pathname === "/";
-  return pathname.startsWith(href);
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function MainNavIcon({
+function isCoreShellPath(pathname: string | null) {
+  if (!pathname) return false;
+
+  return coreShellRoutes.some((route) => {
+    if (route === "/") return pathname === "/";
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
+}
+
+function AssetIcon({
+  src,
+  label,
+  className,
+}: {
+  src: string;
+  label: string;
+  className: string;
+}) {
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      title={label}
+      className={className}
+    />
+  );
+}
+
+function LegacyNavIcon({
   pathname,
   href,
   label,
-  icon,
+  iconSrc,
 }: {
   pathname: string | null;
   href: string;
   label: string;
-  icon: ReactNode;
+  iconSrc: string;
 }) {
   const active = isActivePath(pathname, href);
 
@@ -157,36 +113,38 @@ function MainNavIcon({
           active ? "bg-(--accent)" : "bg-transparent"
         }`}
       />
-      <span
-        className={`transition-colors duration-200 ${
-          active ? "text-white" : "text-white/60 group-hover:text-white"
-        }`}
-      >
-        {icon}
-      </span>
+      <AssetIcon
+        src={iconSrc}
+        label={label}
+        className="h-[20px] w-[20px] opacity-80"
+      />
     </Link>
   );
 }
 
-function SettingsIcon() {
+function CoreNavIcon({
+  pathname,
+  item,
+}: {
+  pathname: string | null;
+  item: MainNavItem;
+}) {
+  const active = isActivePath(pathname, item.href);
+
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-[18px] w-[18px]"
-      fill="none"
-      aria-hidden="true"
+    <Link
+      href={item.href}
+      aria-label={item.label}
+      title={item.label}
+      data-active={active}
+      className="core-shell-icon"
     >
-      <path
-        d="M12 8.7A3.3 3.3 0 1 0 12 15.3A3.3 3.3 0 0 0 12 8.7Z"
-        stroke="currentColor"
-        strokeWidth="1.7"
+      <AssetIcon
+        src={item.iconSrc}
+        label={item.label}
+        className="h-[30px] w-[30px]"
       />
-      <path
-        d="M19.2 15.2a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9v.2a2 2 0 1 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 1 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 1 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a2 2 0 1 1 0 4H20a1 1 0 0 0-.8.6Z"
-        stroke="currentColor"
-        strokeWidth="1.25"
-      />
-    </svg>
+    </Link>
   );
 }
 
@@ -200,6 +158,36 @@ function MenuIcon() {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+function MobileNavItem({
+  item,
+  pathname,
+}: {
+  item: MainNavItem;
+  pathname: string | null;
+}) {
+  const active = isActivePath(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      aria-label={item.label}
+      data-active={active}
+      className={`nav-link-fx inline-flex h-11 cursor-pointer items-center justify-center border transition-all duration-200 ${
+        active
+          ? "border-white/24 bg-white/12 text-white"
+          : "border-white/12 text-white/68 hover:border-white/24 hover:bg-white/8 hover:text-white"
+      }`}
+    >
+      <AssetIcon
+        src={item.iconSrc}
+        label={item.label}
+        className="h-[18px] w-[18px] opacity-85"
+      />
+    </Link>
   );
 }
 
@@ -228,9 +216,15 @@ export function FloatingNavbar() {
     return false;
   }, [pathname, practiceUiHidden]);
 
+  const isCoreShellRoute = useMemo(() => isCoreShellPath(pathname), [pathname]);
+
   useEffect(() => {
-    setMobileOpen(false);
-    setUserMenuOpen(false);
+    const frame = window.requestAnimationFrame(() => {
+      setMobileOpen(false);
+      setUserMenuOpen(false);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
   useEffect(() => {
@@ -259,157 +253,319 @@ export function FloatingNavbar() {
         transition={{ duration: 0.22 }}
         className="relative mx-auto w-full"
       >
-        <div className="relative flex h-[68px] items-center justify-between px-3 sm:px-4">
-          <div className="flex w-[84px] items-center">
-            <Link
-              href="/"
-              className="cursor-pointer text-white/90 transition-opacity duration-200 hover:opacity-80"
-            >
-              <span className="text-3xl font-bold leading-none">tr.</span>
-            </Link>
-          </div>
+        {isCoreShellRoute
+          ? (
+            <div className="relative flex h-[60px] items-center px-4 md:px-[60px]">
+              <div className="w-[150px] shrink-0">
+                <Link
+                  href="/"
+                  className="inline-flex cursor-pointer items-center text-2xl leading-none font-extrabold tracking-tight text-white/90 transition-opacity duration-200 hover:opacity-80"
+                >
+                  Typerush
+                </Link>
+              </div>
+              <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+                <nav className="core-shell-nav">
+                  <div className="flex items-center justify-center pl-10 pr-4 gap-4">
+                    <CoreNavIcon pathname={pathname} item={leftMainNav[0]} />
+                    <CoreNavIcon pathname={pathname} item={leftMainNav[1]} />
+                  </div>
+                  <div className="w-auto h-full">
+                    <Link
+                      href="/"
+                      data-active={playActive}
+                      className="core-shell-play h-full"
+                    >
+                      <span className="inline-flex overflow-hidden lowercase">
+                        {"Play".split("").map((char, i) => (
+                          <motion.span
+                            key={i}
+                            className="inline-block first:capitalize"
+                            animate={{
+                              y: [0, -30, 30, 0],
+                              opacity: [1, 0, 0, 1],
+                            }}
+                            transition={{
+                              duration: 0.4,
+                              delay: i * 0.1,
+                              repeat: Infinity,
+                              repeatDelay: 4,
+                              ease: "easeInOut",
+                            }}
+                          >
+                            {char}
+                          </motion.span>
+                        ))}
+                      </span>
+                    </Link>
+                  </div>
+                  <div className="flex items-center justify-center pl-4 pr-10 gap-4">
+                    <CoreNavIcon pathname={pathname} item={rightMainNav[0]} />
+                    <CoreNavIcon pathname={pathname} item={rightMainNav[1]} />
+                  </div>
+                </nav>
+              </div>
 
-          <div className="hidden min-w-0 flex-1 self-stretch items-center justify-center lg:flex">
-            <nav
-              className="relative grid h-full w-fit grid-cols-[80px_64px_auto_64px_80px] gap-px border border-white/6 bg-[linear-gradient(180deg,rgba(10,13,20,0.95),rgba(6,8,14,0.88))] shadow-[0_20px_40px_-20px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl"
-              style={{
-                clipPath:
-                  "polygon(0 0, 100% 0, calc(100% - 16px) 100%, 16px 100%)",
-              }}
-            >
-              <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-[linear-gradient(90deg,transparent_5%,rgba(255,255,255,0.1)_30%,rgba(255,70,85,0.2)_50%,rgba(255,255,255,0.1)_70%,transparent_95%)]" />
+              <div className="ml-auto flex w-[150px] items-center justify-end gap-2 lg:hidden">
+                <Link
+                  href="/settings"
+                  aria-label="Settings"
+                  title="Settings"
+                  className={`nav-btn-fx inline-flex h-62 w-full items-center justify-center rounded-full border transition-all duration-200`}
+                >
+                  <AssetIcon
+                    src="/assets/icons/settings.svg"
+                    label="Settings"
+                    className="h-[30px] w-[30px]"
+                  />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen((value) => !value)}
+                  className="nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/74 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                  aria-label="Open navigation"
+                >
+                  <MenuIcon />
+                </button>
+              </div>
+            </div>
+          )
+          : (
+            <div className="relative flex h-[68px] items-center justify-between px-4 md:px-[60px]">
+              <div className="flex w-[84px] items-center">
+                <Link
+                  href="/"
+                  className="cursor-pointer text-white/90 transition-opacity duration-200 hover:opacity-80"
+                >
+                  <span className="text-xl font-bold leading-none">tr.</span>
+                </Link>
+              </div>
+              <div className="hidden min-w-0 flex-1 self-stretch items-center justify-center lg:flex">
+                <nav
+                  className="relative grid h-full w-fit grid-cols-[80px_64px_auto_64px_80px] gap-px border border-white/6 bg-[linear-gradient(180deg,rgba(10,13,20,0.95),rgba(6,8,14,0.88))] shadow-[0_20px_40px_-20px_rgba(0,0,0,0.85),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-2xl"
+                  style={{
+                    clipPath:
+                      "polygon(0 0, 100% 0, calc(100% - 16px) 100%, 16px 100%)",
+                  }}
+                >
+                  <span className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-[linear-gradient(90deg,transparent_5%,rgba(255,255,255,0.1)_30%,rgba(255,70,85,0.2)_50%,rgba(255,255,255,0.1)_70%,transparent_95%)]" />
+                  <LegacyNavIcon
+                    pathname={pathname}
+                    href={leftMainNav[0].href}
+                    label={leftMainNav[0].label}
+                    iconSrc={leftMainNav[0].iconSrc}
+                  />
+                  <LegacyNavIcon
+                    pathname={pathname}
+                    href={leftMainNav[1].href}
+                    label={leftMainNav[1].label}
+                    iconSrc={leftMainNav[1].iconSrc}
+                  />
 
-              <MainNavIcon
-                pathname={pathname}
-                href={leftMainNav[0].href}
-                label={leftMainNav[0].label}
-                icon={leftMainNav[0].icon}
-              />
-              <MainNavIcon
-                pathname={pathname}
-                href={leftMainNav[1].href}
-                label={leftMainNav[1].label}
-                icon={leftMainNav[1].icon}
-              />
+                  <Link
+                    href="/"
+                    data-active={playActive}
+                    className={`nav-play-fx group relative flex h-full items-center justify-center transition-all duration-200 ${
+                      playActive ? "bg-white/10" : "bg-white/5 hover:bg-white/8"
+                    }`}
+                  >
+                    <span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,70,85,0.5),transparent)]" />
+                    <span className="px-10 text-sm font-bold capitalize leading-none tracking-widest text-white">
+                      Play
+                    </span>
+                  </Link>
 
+                  <LegacyNavIcon
+                    pathname={pathname}
+                    href={rightMainNav[0].href}
+                    label={rightMainNav[0].label}
+                    iconSrc={rightMainNav[0].iconSrc}
+                  />
+                  <LegacyNavIcon
+                    pathname={pathname}
+                    href={rightMainNav[1].href}
+                    label={rightMainNav[1].label}
+                    iconSrc={rightMainNav[1].iconSrc}
+                  />
+                </nav>
+              </div>
+              <div className="flex w-[140px] items-center justify-end">
+                <Link
+                  href="/settings"
+                  aria-label="Settings"
+                  title="Settings"
+                  className={`nav-btn-fx inline-flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${
+                    isActivePath(pathname, "/settings")
+                      ? "border-white/28 bg-white/14"
+                      : "border-white/12 hover:border-white/25 hover:bg-white/8"
+                  }`}
+                >
+                  <AssetIcon
+                    src="/assets/icons/settings.svg"
+                    label="Settings"
+                    className="h-[18px] w-[18px] opacity-85"
+                  />
+                </Link>
+
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setUserMenuOpen((value) => !value)}
+                    aria-label="User menu"
+                    className={`nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 ${
+                      userMenuOpen
+                        ? "border-white/28 bg-white/14"
+                        : "border-white/12 hover:border-white/25 hover:bg-white/8"
+                    }`}
+                  >
+                    <UserAvatar
+                      src={currentUser?.image ?? null}
+                      name={displayName}
+                      className="h-8 w-8 rounded-full"
+                      fallbackClassName="bg-[linear-gradient(145deg,rgba(255,255,255,0.24),rgba(255,255,255,0.1))] text-[10px] font-bold text-white"
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {userMenuOpen
+                      ? (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ duration: 0.16 }}
+                          className="absolute right-0 top-[calc(100%+10px)] z-40 w-[240px] border border-white/14 bg-[#0f131a]/94 p-3 backdrop-blur-2xl"
+                        >
+                          <div className="border-b border-white/12 pb-3">
+                            <div className="text-sm font-semibold text-white">
+                              {displayName}
+                            </div>
+                            <div className="mt-1 truncate text-xs text-white/62">
+                              {email}
+                            </div>
+                          </div>
+
+                          {isAuthenticated
+                            ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setUserMenuOpen(false);
+                                  void signOut();
+                                }}
+                                className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
+                              >
+                                Logout
+                              </button>
+                            )
+                            : (
+                              <Link
+                                href="/login"
+                                className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
+                              >
+                                Login
+                              </Link>
+                            )}
+                        </motion.div>
+                      )
+                      : null}
+                  </AnimatePresence>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen((value) => !value)}
+                  className="nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/74 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white lg:hidden"
+                  aria-label="Open navigation"
+                >
+                  <MenuIcon />
+                </button>
+              </div>
+            </div>
+          )}
+      </motion.header>
+      {isCoreShellRoute
+        ? (
+          <div className="pointer-events-none fixed right-0 top-0 z-[52] hidden h-screen lg:flex">
+            <div className="core-right-rail pointer-events-auto">
               <Link
-                href="/"
-                data-active={playActive}
-                className={`nav-play-fx group relative flex h-full items-center justify-center transition-all duration-200 ${
-                  playActive ? "bg-white/10" : "bg-white/5 hover:bg-white/8"
-                }`}
+                href="/settings"
+                aria-label="Settings"
+                title="Settings"
+                data-active={isActivePath(pathname, "/settings")}
+                className="core-rail-action"
               >
-                <span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,70,85,0.5),transparent)]" />
-                <span className="px-10 text-[2rem] font-bold capitalize leading-none tracking-widest text-white">
-                  Play
-                </span>
+                <AssetIcon
+                  src="/assets/icons/settings.svg"
+                  label="Settings"
+                  className="h-[20px] w-[20px]"
+                />
               </Link>
 
-              <MainNavIcon
-                pathname={pathname}
-                href={rightMainNav[0].href}
-                label={rightMainNav[0].label}
-                icon={rightMainNav[0].icon}
-              />
-              <MainNavIcon
-                pathname={pathname}
-                href={rightMainNav[1].href}
-                label={rightMainNav[1].label}
-                icon={rightMainNav[1].icon}
-              />
-            </nav>
-          </div>
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setUserMenuOpen((value) => !value)}
+                  aria-label="User menu"
+                  data-active={userMenuOpen}
+                  className="core-rail-action"
+                >
+                  <AssetIcon
+                    src="/assets/icons/friends.svg"
+                    label="User menu"
+                    className="h-[21px] w-[21px]"
+                  />
+                </button>
 
-          <div className="flex w-[140px] items-center justify-end gap-2">
-            <Link
-              href="/settings"
-              aria-label="Settings"
-              title="Settings"
-              className={`nav-btn-fx inline-flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-200 ${
-                isActivePath(pathname, "/settings")
-                  ? "border-white/28 bg-white/14 text-white"
-                  : "border-white/12 text-white/60 hover:border-white/25 hover:bg-white/8 hover:text-white"
-              }`}
-            >
-              <SettingsIcon />
-            </Link>
-
-            <div className="relative" ref={userMenuRef}>
-              <button
-                type="button"
-                onClick={() => setUserMenuOpen((value) => !value)}
-                aria-label="User menu"
-                className={`nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border transition-all duration-200 ${
-                  userMenuOpen
-                    ? "border-white/28 bg-white/14"
-                    : "border-white/12 hover:border-white/25 hover:bg-white/8"
-                }`}
-              >
-                <UserAvatar
-                  src={currentUser?.image ?? null}
-                  name={displayName}
-                  className="h-8 w-8 rounded-full"
-                  fallbackClassName="bg-[linear-gradient(145deg,rgba(255,255,255,0.24),rgba(255,255,255,0.1))] text-[10px] font-bold text-white"
-                />
-              </button>
-
-              <AnimatePresence>
-                {userMenuOpen
-                  ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.16 }}
-                      className="absolute right-0 top-[calc(100%+10px)] z-40 w-[240px] border border-white/14 bg-[#0f131a]/94 p-3 backdrop-blur-2xl"
-                    >
-                      <div className="border-b border-white/12 pb-3">
-                        <div className="text-sm font-semibold text-white">
-                          {displayName}
+                <AnimatePresence>
+                  {userMenuOpen
+                    ? (
+                      <motion.div
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ duration: 0.16 }}
+                        className="absolute right-[calc(100%+10px)] top-0 z-40 w-[240px] border border-white/14 bg-[#0f131a]/94 p-3 backdrop-blur-2xl"
+                      >
+                        <div className="border-b border-white/12 pb-3">
+                          <div className="text-sm font-semibold text-white">
+                            {displayName}
+                          </div>
+                          <div className="mt-1 truncate text-xs text-white/62">
+                            {email}
+                          </div>
                         </div>
-                        <div className="mt-1 truncate text-xs text-white/62">
-                          {email}
-                        </div>
-                      </div>
 
-                      {isAuthenticated
-                        ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUserMenuOpen(false);
-                              void signOut();
-                            }}
-                            className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
-                          >
-                            Logout
-                          </button>
-                        )
-                        : (
-                          <Link
-                            href="/login"
-                            className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
-                          >
-                            Login
-                          </Link>
-                        )}
-                    </motion.div>
-                  )
-                  : null}
-              </AnimatePresence>
+                        {isAuthenticated
+                          ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserMenuOpen(false);
+                                void signOut();
+                              }}
+                              className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
+                            >
+                              Logout
+                            </button>
+                          )
+                          : (
+                            <Link
+                              href="/login"
+                              className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
+                            >
+                              Login
+                            </Link>
+                          )}
+                      </motion.div>
+                    )
+                    : null}
+                </AnimatePresence>
+              </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setMobileOpen((value) => !value)}
-              className="nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/74 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white lg:hidden"
-              aria-label="Open navigation"
-            >
-              <MenuIcon />
-            </button>
           </div>
-        </div>
-      </motion.header>
+        )
+        : null}
 
       <AnimatePresence>
         {mobileOpen
@@ -421,27 +577,52 @@ export function FloatingNavbar() {
               transition={{ duration: 0.16 }}
               className="mx-3 mt-1 border border-white/14 bg-[#0f131a]/94 p-2 backdrop-blur-2xl sm:mx-4 lg:hidden"
             >
-              <div className="grid grid-cols-4 gap-2">
-                {[...leftMainNav, ...rightMainNav].map((item) => {
-                  const active = isActivePath(pathname, item.href);
+              <div className="grid grid-cols-5 gap-2">
+                <MobileNavItem item={leftMainNav[0]} pathname={pathname} />
+                <MobileNavItem item={leftMainNav[1]} pathname={pathname} />
+                <Link
+                  href="/"
+                  data-active={playActive}
+                  className={`nav-link-fx inline-flex h-11 cursor-pointer items-center justify-center border text-sm font-semibold tracking-[0.04em] transition-all duration-200 ${
+                    playActive
+                      ? "border-white/24 bg-white/12 text-white"
+                      : "border-white/12 text-white/68 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                  }`}
+                >
+                  Play
+                </Link>
+                <MobileNavItem item={rightMainNav[0]} pathname={pathname} />
+                <MobileNavItem item={rightMainNav[1]} pathname={pathname} />
+              </div>
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      title={item.label}
-                      aria-label={item.label}
-                      data-active={active}
-                      className={`nav-link-fx inline-flex h-11 cursor-pointer items-center justify-center border transition-all duration-200 ${
-                        active
-                          ? "border-white/24 bg-white/12 text-white"
-                          : "border-white/12 text-white/68 hover:border-white/24 hover:bg-white/8 hover:text-white"
-                      }`}
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link
+                  href="/settings"
+                  className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                >
+                  Settings
+                </Link>
+                {isAuthenticated
+                  ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        void signOut();
+                      }}
+                      className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
                     >
-                      {item.icon}
+                      Logout
+                    </button>
+                  )
+                  : (
+                    <Link
+                      href="/login"
+                      className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                    >
+                      Login
                     </Link>
-                  );
-                })}
+                  )}
               </div>
             </motion.div>
           )
