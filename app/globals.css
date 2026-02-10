@@ -465,21 +465,23 @@ body::before {
   transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.core-right-rail--expanded {
+.core-right-rail:hover {
   width: 200px;
 }
 
 .core-rail-toggle {
   display: flex;
+  width: 56px;
+  min-width: 56px;
   height: 44px;
   min-height: 44px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   transition: background 180ms ease;
 }
 
-.core-rail-toggle:hover {
+.core-right-rail:hover .core-rail-toggle {
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -524,7 +526,7 @@ body::before {
   pointer-events: none;
 }
 
-.core-right-rail--expanded .core-rail-label {
+.core-right-rail:hover .core-rail-label {
   opacity: 1;
   transform: translateX(0);
   pointer-events: auto;
@@ -577,13 +579,19 @@ body::before {
 }
 
 .core-rail-user-info {
-  padding: 10px 16px;
+  max-height: 0;
+  padding: 0 16px;
   overflow: hidden;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition:
+    max-height 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
 }
 
-.core-right-rail--expanded .core-rail-user-info {
+.core-right-rail:hover .core-rail-user-info {
+  max-height: 60px;
+  padding: 10px 16px;
   opacity: 1;
 }
 
@@ -606,6 +614,7 @@ body::before {
 .hero-card-row {
   align-items: flex-end;
   gap: 1.5rem;
+  perspective: 1000px;
 }
 
 .hero-slot-card {
@@ -617,10 +626,11 @@ body::before {
   background:
     linear-gradient(
       180deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(26, 28, 34, 0.82) 48%,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(26, 28, 34, 0.88) 52%,
       rgba(8, 8, 8, 0) 100%
-    );
+    ),
+    linear-gradient(145deg, rgba(255, 70, 85, 0.07), rgba(255, 70, 85, 0));
   clip-path: polygon(
     0 0,
     calc(100% - 14px) 0,
@@ -637,6 +647,7 @@ body::before {
   );
   mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   filter: drop-shadow(0 0 0.8px rgba(255, 255, 255, 0.24));
+  transform-style: preserve-3d;
   transform: translateZ(0);
   transition:
     transform 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99),
@@ -648,6 +659,11 @@ body::before {
 .hero-slot-card:hover {
   opacity: 1;
   filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.42));
+  transform: translateZ(12px) rotateY(-4deg);
+}
+
+.hero-card-row .hero-slot-card:last-child:hover {
+  transform: translateZ(12px) rotateY(4deg);
 }
 
 .hero-slot-card img {
@@ -669,6 +685,7 @@ body::before {
   );
   filter: drop-shadow(0 0 1px rgba(255, 70, 85, 0.92));
   overflow: hidden;
+  transform-style: preserve-3d;
   transform: translateZ(0);
   transition:
     transform 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99),
@@ -678,6 +695,7 @@ body::before {
 .hero-profile-card:hover {
   filter: drop-shadow(0 0 1.5px rgba(255, 102, 115, 1))
     drop-shadow(0 6px 18px rgba(255, 70, 85, 0.16));
+  transform: translateZ(16px) rotateY(-2deg);
 }
 
 .hero-profile-card::before {
@@ -710,16 +728,32 @@ body::before {
   );
 }
 
-.hero-profile-name {
+.hero-profile-footer {
   position: absolute;
   inset-inline: 24px;
   bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.hero-profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  object-fit: cover;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.hero-profile-name {
   color: #fff;
   font-size: 2.35rem;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  z-index: 2;
   text-shadow: 0 8px 24px rgba(0, 0, 0, 0.78);
 }
 
@@ -792,9 +826,12 @@ body::before {
     height: 492px;
   }
 
-  .hero-profile-name {
+  .hero-profile-footer {
     inset-inline: 20px;
     bottom: 16px;
+  }
+
+  .hero-profile-name {
     font-size: 1.9rem;
   }
 }
@@ -822,9 +859,17 @@ body::before {
     height: 470px;
   }
 
-  .hero-profile-name {
+  .hero-profile-footer {
     inset-inline: 18px;
     bottom: 14px;
+  }
+
+  .hero-profile-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .hero-profile-name {
     font-size: 1.78rem;
   }
 
