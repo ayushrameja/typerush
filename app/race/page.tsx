@@ -1,126 +1,128 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { useMutation } from "convex/react"
-import { api } from "@/convex/_generated/api"
-import { Button } from "@/components/ui/Button"
-import { Input } from "@/components/ui/Input"
-import { Card } from "@/components/ui/Card"
-import { useUserStore } from "@/lib/stores/userStore"
-import { generateTextForDuration } from "@/lib/utils/words"
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Card } from '@/components/ui/Card';
+import { GridBackground } from '@/components/home/GridBackground';
+import { useUserStore } from '@/lib/stores/userStore';
+import { generateTextForDuration } from '@/lib/utils/words';
 
 export default function RaceLobbyPage() {
-  const router = useRouter()
-  const { user, profile } = useUserStore()
-  const [joinCode, setJoinCode] = useState("")
-  const [isCreating, setIsCreating] = useState(false)
-  const [isJoining, setIsJoining] = useState(false)
-  const [isFindingMatch, setIsFindingMatch] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const { user, profile } = useUserStore();
+  const [joinCode, setJoinCode] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isFindingMatch, setIsFindingMatch] = useState(false);
+  const [error, setError] = useState('');
 
-  const createLobby = useMutation(api.lobbies.createLobby)
-  const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode)
-  const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch)
+  const createLobby = useMutation(api.lobbies.createLobby);
+  const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode);
+  const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch);
 
-  const getUsername = () => profile?.username || "Player"
+  const getUsername = () => profile?.username || 'Player';
 
   const handleCreateRoom = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push('/login');
+      return;
     }
 
-    setIsCreating(true)
-    setError("")
+    setIsCreating(true);
+    setError('');
 
     try {
-      const textToType = generateTextForDuration(60)
+      const textToType = generateTextForDuration(60);
       const result = await createLobby({
         hostId: user.id,
         username: getUsername(),
         textToType,
-      })
+      });
 
-      router.push(`/race/${result.lobbyId}?host=true`)
+      router.push(`/race/${result.lobbyId}?host=true`);
     } catch (createError) {
-      console.error(createError)
-      setError("Failed to create room. Please try again.")
+      console.error(createError);
+      setError('Failed to create room. Please try again.');
     } finally {
-      setIsCreating(false)
+      setIsCreating(false);
     }
-  }
+  };
 
   const handleJoinRoom = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push('/login');
+      return;
     }
 
     if (!joinCode.trim()) {
-      setError("Please enter a room code")
-      return
+      setError('Please enter a room code');
+      return;
     }
 
-    setIsJoining(true)
-    setError("")
+    setIsJoining(true);
+    setError('');
 
     try {
       const result = await joinLobbyByCode({
         userId: user.id,
         username: getUsername(),
         roomCode: joinCode,
-      })
+      });
 
       if (!result.ok) {
-        setError(result.error)
-        return
+        setError(result.error);
+        return;
       }
 
-      router.push(`/race/${result.lobbyId}`)
+      router.push(`/race/${result.lobbyId}`);
     } catch (joinError) {
-      console.error(joinError)
-      setError("Failed to join room")
+      console.error(joinError);
+      setError('Failed to join room');
     } finally {
-      setIsJoining(false)
+      setIsJoining(false);
     }
-  }
+  };
 
   const handleFindMatch = async () => {
     if (!user) {
-      router.push("/login")
-      return
+      router.push('/login');
+      return;
     }
 
-    setIsFindingMatch(true)
-    setError("")
+    setIsFindingMatch(true);
+    setError('');
 
     try {
-      const textToType = generateTextForDuration(60)
+      const textToType = generateTextForDuration(60);
       const result = await findOrCreateMatch({
         userId: user.id,
         username: getUsername(),
         textToType,
-      })
+      });
 
-      if (result.role === "host") {
-        router.push(`/race/${result.lobbyId}?host=true&matchmaking=true`)
+      if (result.role === 'host') {
+        router.push(`/race/${result.lobbyId}?host=true&matchmaking=true`);
       } else {
-        router.push(`/race/${result.lobbyId}`)
+        router.push(`/race/${result.lobbyId}`);
       }
     } catch (matchError) {
-      console.error(matchError)
-      setError("Failed to find match. Please try again.")
+      console.error(matchError);
+      setError('Failed to find match. Please try again.');
     } finally {
-      setIsFindingMatch(false)
+      setIsFindingMatch(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="arena-shell min-h-screen px-4 py-12">
+      <GridBackground />
+      <div className="relative mx-auto max-w-3xl pt-20">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -128,85 +130,50 @@ export default function RaceLobbyPage() {
         >
           <Link
             href="/"
-            className="inline-flex items-center text-zinc-500 hover:text-zinc-300 transition-colors mb-6"
+            className="mb-5 inline-flex items-center gap-2 text-sm font-semibold tracking-[0.05em] text-white/60 transition-colors hover:text-white/85"
           >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Home
           </Link>
 
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            1v1 Race
-          </h1>
-          <p className="text-zinc-500 mt-2">
-            Challenge a friend or find a random opponent
-          </p>
+          <div className="arena-chip">Multiplayer</div>
+          <h1 className="arena-heading mt-4 text-7xl leading-none text-white">1v1 Race</h1>
+          <p className="mt-2 text-white/58">Queue random, create a room, or join by code.</p>
         </motion.div>
 
         {!user && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-8 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20"
+            className="mb-8 rounded-2xl border border-[#ff4655]/45 bg-[#ff4655]/12 p-4"
           >
-            <p className="text-yellow-400 text-sm">
-              You need to{" "}
+            <p className="text-sm text-[#ffadb4]">
+              You need to{' '}
               <Link href="/login" className="underline hover:no-underline">
                 sign in
-              </Link>{" "}
+              </Link>{' '}
               to play multiplayer races.
             </p>
           </motion.div>
         )}
 
         <div className="grid gap-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <Card className="p-6">
-              <h2 className="text-xl font-semibold text-zinc-200 mb-4">
-                Quick Match
-              </h2>
-              <p className="text-zinc-500 mb-4">
-                Find a random opponent to race against
-              </p>
-              <Button
-                onClick={handleFindMatch}
-                isLoading={isFindingMatch}
-                disabled={!user}
-                className="w-full"
-                size="lg"
-              >
+              <h2 className="arena-heading text-4xl leading-none text-white">Quick Match</h2>
+              <p className="mb-4 mt-2 text-white/58">Find a random opponent and start immediately.</p>
+              <Button onClick={handleFindMatch} isLoading={isFindingMatch} disabled={!user} className="w-full" size="lg">
                 Find Opponent
               </Button>
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card className="p-6">
-              <h2 className="text-xl font-semibold text-zinc-200 mb-4">
-                Create Room
-              </h2>
-              <p className="text-zinc-500 mb-4">
-                Create a private room and share the code with a friend
-              </p>
+              <h2 className="arena-heading text-4xl leading-none text-white">Create Room</h2>
+              <p className="mb-4 mt-2 text-white/58">Host a private room and share your room code.</p>
               <Button
                 onClick={handleCreateRoom}
                 isLoading={isCreating}
@@ -220,18 +187,10 @@ export default function RaceLobbyPage() {
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <Card className="p-6">
-              <h2 className="text-xl font-semibold text-zinc-200 mb-4">
-                Join Room
-              </h2>
-              <p className="text-zinc-500 mb-4">
-                Enter a room code to join a friend&apos;s game
-              </p>
+              <h2 className="arena-heading text-4xl leading-none text-white">Join Room</h2>
+              <p className="mb-4 mt-2 text-white/58">Enter a room code from your teammate.</p>
               <div className="flex gap-3">
                 <Input
                   placeholder="Enter room code"
@@ -253,16 +212,12 @@ export default function RaceLobbyPage() {
           </motion.div>
 
           {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-red-400 text-center"
-            >
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center text-[#ff8d97]">
               {error}
             </motion.p>
           )}
         </div>
       </div>
     </div>
-  )
+  );
 }

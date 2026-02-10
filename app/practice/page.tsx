@@ -106,7 +106,7 @@ export default function PracticePage() {
 
   if (isBooting) {
     return (
-      <div className="relative min-h-screen">
+      <div className="arena-shell">
         <GridBackground />
         <div className="relative min-h-screen px-4 pt-28 pb-20">
           <div className="max-w-5xl mx-auto">
@@ -118,7 +118,7 @@ export default function PracticePage() {
   }
 
   return (
-    <div className="relative min-h-screen">
+    <div className="arena-shell">
       <GridBackground />
       <div className="relative min-h-screen px-4 pt-28 pb-20">
         <div className="max-w-5xl mx-auto">

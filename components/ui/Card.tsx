@@ -19,16 +19,14 @@ export function Card({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={`
-        relative rounded-[32px]
-        bg-zinc-900/80 backdrop-blur-sm
-        border border-zinc-800
-        ${glow ? "shadow-lg shadow-[#f5a524]/10" : ""}
+        relative rounded-[28px] arena-card
+        ${glow ? "shadow-[0_24px_60px_-42px_rgba(255,70,85,0.95)]" : ""}
         ${className}
       `}
       {...props}
     >
       {glow && (
-        <div className="absolute inset-0 -z-10 rounded-[32px] bg-linear-to-r from-[#f5a524]/20 to-white/5 blur-xl" />
+        <div className="pointer-events-none absolute inset-0 -z-10 rounded-[28px] bg-linear-to-r from-[#ff4655]/20 to-transparent blur-2xl" />
       )}
       {children}
     </motion.div>

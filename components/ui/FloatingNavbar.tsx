@@ -1,344 +1,454 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useAuthActions } from '@convex-dev/auth/react';
-import { useConvexAuth, useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { useGameStore } from '@/lib/stores/gameStore';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useGameStore } from "@/lib/stores/gameStore";
 
-type NavItem = {
+type MainNavItem = {
   href: string;
   label: string;
-  shortcut?: string;
-  icon: ReactNode;
-  disabled?: boolean;
+  iconSrc: string;
 };
 
-const navItems: NavItem[] = [
+const leftMainNav: MainNavItem[] = [
   {
-    href: '/',
-    label: 'Home',
-    shortcut: 'H',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-        <path
-          d="M4 11.5L12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-8.5Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-        />
-      </svg>
-    ),
+    href: "/practice",
+    label: "Practice",
+    iconSrc: "/assets/icons/biceps.svg",
   },
   {
-    href: '/practice',
-    label: 'Practice',
-    shortcut: 'P',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-        <path
-          d="M6 19a9 9 0 1 1 12 0"
-          stroke="currentColor"
-          strokeWidth="1.6"
-        />
-        <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-      </svg>
-    ),
-  },
-  {
-    href: '/history',
-    label: 'History',
-    shortcut: 'T',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-        <path d="M12 7v5l3.5 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: '/leaderboard',
-    label: 'Leaderboard',
-    shortcut: 'L',
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
-        <path
-          d="M7 21V10h4v11H7Zm6 0V3h4v18h-4Z"
-          stroke="currentColor"
-          strokeWidth="1.6"
-        />
-      </svg>
-    ),
+    href: "/history",
+    label: "History",
+    iconSrc: "/assets/icons/recent.svg",
   },
 ];
 
+const rightMainNav: MainNavItem[] = [
+  {
+    href: "/leaderboard",
+    label: "Leaderboard",
+    iconSrc: "/assets/icons/leadship.svg",
+  },
+  {
+    href: "/collection",
+    label: "Collection",
+    iconSrc: "/assets/icons/collection.svg",
+  },
+];
+
+function isActivePath(pathname: string | null, href: string) {
+  if (!pathname) return href === "/";
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function AssetIcon({
+  src,
+  label,
+  className,
+}: {
+  src: string;
+  label: string;
+  className: string;
+}) {
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden="true"
+      title={label}
+      className={className}
+    />
+  );
+}
+
+function CoreNavIcon({
+  pathname,
+  item,
+}: {
+  pathname: string | null;
+  item: MainNavItem;
+}) {
+  const active = isActivePath(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href}
+      aria-label={item.label}
+      title={item.label}
+      data-active={active}
+      className="core-shell-icon"
+    >
+      <AssetIcon
+        src={item.iconSrc}
+        label={item.label}
+        className="h-[30px] w-[30px]"
+      />
+    </Link>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function MobileNavItem({
+  item,
+  pathname,
+}: {
+  item: MainNavItem;
+  pathname: string | null;
+}) {
+  const active = isActivePath(pathname, item.href);
+
+  return (
+    <Link
+      href={item.href}
+      title={item.label}
+      aria-label={item.label}
+      data-active={active}
+      className={`nav-link-fx inline-flex h-11 cursor-pointer items-center justify-center border transition-all duration-200 ${
+        active
+          ? "border-white/24 bg-white/12 text-white"
+          : "border-white/12 text-white/68 hover:border-white/24 hover:bg-white/8 hover:text-white"
+      }`}
+    >
+      <AssetIcon
+        src={item.iconSrc}
+        label={item.label}
+        className="h-[18px] w-[18px] opacity-85"
+      />
+    </Link>
+  );
+}
+
+function RightSidePanel({
+  pathname,
+  isAuthenticated,
+  displayName,
+  email,
+  onSignOut,
+}: {
+  pathname: string | null;
+  isAuthenticated: boolean;
+  displayName: string;
+  email: string;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="pointer-events-none fixed right-0 top-0 z-52 hidden h-screen lg:flex">
+      <div className="core-right-rail pointer-events-auto group">
+        <div
+          className="core-rail-toggle"
+          aria-hidden="true"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4 text-white/60 transition-transform duration-200 group-hover:rotate-180"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </div>
+
+        <div className="core-rail-divider" />
+
+        <Link
+          href="/settings"
+          aria-label="Settings"
+          title="Settings"
+          data-active={isActivePath(pathname, "/settings")}
+          className="core-rail-action"
+        >
+          <AssetIcon
+            src="/assets/icons/settings.svg"
+            label="Settings"
+            className="core-rail-icon"
+          />
+          <span className="core-rail-label">Settings</span>
+        </Link>
+
+        <Link
+          href={isAuthenticated ? "/race" : "/login"}
+          aria-label="Friends"
+          title="Friends"
+          className="core-rail-action"
+        >
+          <AssetIcon
+            src="/assets/icons/friends.svg"
+            label="Friends"
+            className="core-rail-icon"
+          />
+          <span className="core-rail-label">Friends</span>
+        </Link>
+
+        <div className="core-rail-divider" />
+
+        {isAuthenticated
+          ? (
+            <div className="core-rail-user-section">
+              <div className="core-rail-user-info">
+                <div className="text-xs font-semibold text-white truncate">
+                  {displayName}
+                </div>
+                <div className="text-[10px] text-white/50 truncate">
+                  {email}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="core-rail-action-btn"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="core-rail-icon"
+                >
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span className="core-rail-label">Logout</span>
+              </button>
+            </div>
+          )
+          : (
+            <Link
+              href="/login"
+              className="core-rail-action-btn"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="core-rail-icon"
+              >
+                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              <span className="core-rail-label">Sign in</span>
+            </Link>
+          )}
+      </div>
+    </div>
+  );
+}
+
 export function FloatingNavbar() {
   const pathname = usePathname();
-  const gameStatus = useGameStore((s) => s.status);
   const { isAuthenticated } = useConvexAuth();
   const { signOut } = useAuthActions();
   const currentUser = useQuery(
     api.users.currentUser,
-    isAuthenticated ? {} : 'skip'
+    isAuthenticated ? {} : "skip",
   );
+  const gameStatus = useGameStore((state) => state.status);
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
-  const shortcutsDisabled = useMemo(() => {
-    return gameStatus === 'playing' || gameStatus === 'paused';
-  }, [gameStatus]);
-
+  const practiceUiHidden = useMemo(
+    () => gameStatus === "playing" || gameStatus === "paused",
+    [gameStatus],
+  );
   const isHiddenRoute = useMemo(() => {
     if (!pathname) return false;
-    if (pathname.startsWith('/race')) return true;
-    if (pathname.startsWith('/practice')) return shortcutsDisabled;
+    if (pathname.startsWith("/race/")) return true;
+    if (pathname.startsWith("/practice")) return practiceUiHidden;
     return false;
-  }, [pathname, shortcutsDisabled]);
-
-  const activeHref = useMemo(() => {
-    if (!pathname) return '/';
-    const exact = navItems.find((i) => i.href === pathname);
-    if (exact) return exact.href;
-    if (pathname.startsWith('/history')) return '/history';
-    if (pathname.startsWith('/leaderboard')) return '/leaderboard';
-    return '/';
-  }, [pathname]);
+  }, [pathname, practiceUiHidden]);
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.repeat) return;
+    const frame = window.requestAnimationFrame(() => {
+      setMobileOpen(false);
+    });
 
-      if (shortcutsDisabled) return;
-
-      const active = document.activeElement as HTMLElement | null;
-      const isEditable =
-        !!active &&
-        (active.tagName === 'INPUT' ||
-          active.tagName === 'TEXTAREA' ||
-          active.tagName === 'SELECT' ||
-          active.isContentEditable);
-      if (isEditable) return;
-
-      const key = e.key.toLowerCase();
-      if (key === 'p') window.location.href = '/practice';
-      if (key === 'h') window.location.href = '/';
-      if (key === 't') window.location.href = '/history';
-      if (key === 'l') window.location.href = '/leaderboard';
-      if (key === 'escape') setMobileOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [shortcutsDisabled]);
-
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
 
   if (isHiddenRoute) return null;
 
-  const displayName = currentUser?.name ?? currentUser?.email ?? 'Player';
+  const displayName = currentUser?.name ?? "Player";
+  const email = currentUser?.email ?? "No email on file";
+  const playActive = pathname === "/";
 
   return (
-    <div className="fixed top-6 left-0 right-0 z-50">
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
+    <div className="fixed inset-x-0 top-0 z-50">
+      <motion.header
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-        className="mx-auto flex max-w-6xl items-center justify-between px-4"
+        transition={{ duration: 0.22 }}
+        className="relative mx-auto w-full"
       >
-        <Link href="/" className="flex items-center gap-2 text-white">
-          <span className="text-2xl font-semibold" style={{ fontFamily: 'Stardom, sans-serif' }}>
-            TypeRush
-          </span>
-        </Link>
-
-        <div className="hidden md:flex items-center gap-3 rounded-full border border-white/10 bg-black/70 px-3 py-2 backdrop-blur-xl">
-          {navItems.map((item) => {
-            const isActive = activeHref === item.href;
-            const isHovered = hoveredHref === item.href;
-            const isDisabled = item.disabled;
-            
-            if (isDisabled) {
-              return (
-                <div
-                  key={item.href}
-                  className="relative"
-                  onMouseEnter={() => setHoveredHref(item.href)}
-                  onMouseLeave={() => setHoveredHref(null)}
-                >
-                  <div
-                    className="flex items-center justify-center h-10 w-10 rounded-2xl border border-white/5 text-white/30 cursor-not-allowed"
-                  >
-                    {item.icon}
-                  </div>
-                  <AnimatePresence>
-                    {isHovered && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 6 }}
-                        className="absolute left-1/2 -translate-x-1/2 -top-9 whitespace-nowrap rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[11px] text-white/50"
-                      >
-                        {item.label} (Coming soon)
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              );
-            }
-            
-            return (
-              <div
-                key={item.href}
-                className="relative"
-                onMouseEnter={() => setHoveredHref(item.href)}
-                onMouseLeave={() => setHoveredHref(null)}
-              >
-                <Link
-                  href={item.href}
-                  className={`flex items-center justify-center h-10 w-10 rounded-2xl border transition-colors ${
-                    isActive
-                      ? 'border-[#f5a524] text-[#f5a524] bg-white/5'
-                      : 'border-white/10 text-white/70 hover:text-white hover:border-white/20'
-                  }`}
-                >
-                  {item.icon}
-                </Link>
-                <AnimatePresence>
-                  {isHovered && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 6 }}
-                      className="absolute left-1/2 -translate-x-1/2 -top-9 whitespace-nowrap rounded-full border border-white/10 bg-black/80 px-3 py-1 text-[11px] text-white/70"
-                    >
-                      {item.label}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+        <div className="relative flex h-[60px] items-center px-4 md:px-[60px] lg:pr-[116px]">
+          <div className="flex h-full w-12 shrink-0 items-center">
+            <Link
+              href="/"
+              aria-label="Home"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/90 transition-opacity duration-200 hover:opacity-80"
+            />
+          </div>
+          <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+            <nav className="core-shell-nav">
+              <div className="flex items-center justify-center pr-4 pl-10 gap-4">
+                <CoreNavIcon pathname={pathname} item={leftMainNav[0]} />
+                <CoreNavIcon pathname={pathname} item={leftMainNav[1]} />
               </div>
-            );
-          })}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-2">
-            {isAuthenticated && currentUser ? (
-              <>
-                <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/5 border border-white/10">
-                  <span className="text-sm text-white/80">
-                    {displayName}
+              <div className="w-auto h-full">
+                <Link
+                  href="/"
+                  data-active={playActive}
+                  className="core-shell-play h-full"
+                >
+                  <span className="inline-flex overflow-hidden lowercase">
+                    {"Play".split("").map((char, i) => (
+                      <motion.span
+                        key={i}
+                        className="inline-block first:capitalize"
+                        animate={{
+                          y: [0, -30, 30, 0],
+                          opacity: [1, 0, 0, 1],
+                        }}
+                        transition={{
+                          duration: 0.4,
+                          delay: i * 0.1,
+                          repeat: Infinity,
+                          repeatDelay: 4,
+                          ease: "easeInOut",
+                        }}
+                      >
+                        {char}
+                      </motion.span>
+                    ))}
                   </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void signOut()}
-                  className="px-4 py-2 rounded-2xl text-sm bg-white/10 text-white/80 hover:bg-white/20 transition-colors"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-2xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                >
-                  Login
                 </Link>
-                <Link
-                  href="/signup"
-                  className="px-4 py-2 rounded-2xl text-sm bg-white/20 text-white/90 hover:bg-white/30 transition-colors"
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
+              </div>
+              <div className="flex items-center justify-center pl-4 pr-10 gap-4">
+                <CoreNavIcon pathname={pathname} item={rightMainNav[0]} />
+                <CoreNavIcon pathname={pathname} item={rightMainNav[1]} />
+              </div>
+            </nav>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            className="md:hidden px-3 py-2 rounded-2xl text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-            aria-label="Open menu"
-          >
-            Menu
-          </button>
+          <div className="ml-auto flex w-[150px] items-center justify-end gap-2 lg:hidden">
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              title="Settings"
+              className="nav-btn-fx inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/12 transition-all duration-200 hover:border-white/24 hover:bg-white/8"
+            >
+              <AssetIcon
+                src="/assets/icons/settings.svg"
+                label="Settings"
+                className="h-[30px] w-[30px]"
+              />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setMobileOpen((value) => !value)}
+              className="nav-btn-fx inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/74 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
+              aria-label="Open navigation"
+            >
+              <MenuIcon />
+            </button>
+          </div>
         </div>
-      </motion.div>
+      </motion.header>
+
+      <RightSidePanel
+        pathname={pathname}
+        isAuthenticated={isAuthenticated}
+        displayName={displayName}
+        email={email}
+        onSignOut={() => void signOut()}
+      />
 
       <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="md:hidden mt-4 px-4"
-          >
-            <div className="glass-panel rounded-3xl p-3">
-              <div className="flex flex-col gap-2">
-                {navItems.map((item) => {
-                  if (item.disabled) {
-                    return (
-                      <div
-                        key={item.href}
-                        className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/30 cursor-not-allowed"
-                      >
-                        <span>{item.label} (Coming soon)</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center justify-between rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+        {mobileOpen
+          ? (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.16 }}
+              className="mx-3 mt-1 border border-white/14 bg-[#0f131a]/94 p-2 backdrop-blur-2xl sm:mx-4 lg:hidden"
+            >
+              <div className="grid grid-cols-5 gap-2">
+                <MobileNavItem item={leftMainNav[0]} pathname={pathname} />
+                <MobileNavItem item={leftMainNav[1]} pathname={pathname} />
+                <Link
+                  href="/"
+                  data-active={playActive}
+                  className={`nav-link-fx inline-flex h-11 cursor-pointer items-center justify-center border text-sm font-semibold tracking-[0.04em] transition-all duration-200 ${
+                    playActive
+                      ? "border-white/24 bg-white/12 text-white"
+                      : "border-white/12 text-white/68 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                  }`}
+                >
+                  Play
+                </Link>
+                <MobileNavItem item={rightMainNav[0]} pathname={pathname} />
+                <MobileNavItem item={rightMainNav[1]} pathname={pathname} />
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <Link
+                  href="/settings"
+                  className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
+                >
+                  Settings
+                </Link>
+                {isAuthenticated
+                  ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        void signOut();
+                      }}
+                      className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
                     >
-                      <span>{item.label}</span>
-                      {item.shortcut && (
-                        <span className="text-[10px] text-white/40 border border-white/10 rounded-md px-1.5 py-0.5">
-                          {item.shortcut}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-                <div className="h-px bg-white/10 my-1" />
-                {isAuthenticated ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileOpen(false);
-                      void signOut();
-                    }}
-                    className="text-left rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    Sign out
-                  </button>
-                ) : (
-                  <>
+                      Logout
+                    </button>
+                  )
+                  : (
                     <Link
                       href="/login"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
+                      className="inline-flex h-10 items-center justify-center border border-white/12 text-xs font-semibold tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/24 hover:bg-white/8 hover:text-white"
                     >
                       Login
                     </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setMobileOpen(false)}
-                      className="rounded-2xl px-3 py-2 text-sm text-white/80 hover:text-white hover:bg-white/5 transition-colors"
-                    >
-                      Sign up
-                    </Link>
-                  </>
-                )}
+                  )}
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )
+          : null}
       </AnimatePresence>
     </div>
   );
