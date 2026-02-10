@@ -496,110 +496,211 @@ body::before {
   opacity: 1;
 }
 
-.hero-slot-card {
-  position: relative;
-  height: 430px;
-  width: 280px;
+.hero-lobby-layout {
+  padding-top: 6.5rem;
+}
+
+.hero-cards-section {
+  display: flex;
+  min-height: 68vh;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: #181818;
+}
+
+.hero-cta-section {
+  height: 24vh;
+  min-height: 150px;
+}
+
+.hero-card-row {
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+
+.hero-slot-card {
+  position: relative;
+  height: 456px;
+  width: 246px;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(26, 28, 34, 0.88) 52%, rgba(8, 8, 8, 0) 100%),
+    linear-gradient(145deg, rgba(255, 70, 85, 0.07), rgba(255, 70, 85, 0));
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+  filter: drop-shadow(0 0 0.8px rgba(255, 255, 255, 0.24));
+  transform: translateZ(0);
   transition:
-    transform 240ms ease,
-    border-color 240ms ease,
+    transform 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99),
+    filter 240ms ease,
     opacity 240ms ease;
-  opacity: 0.78;
+  opacity: 0.9;
 }
 
 .hero-slot-card:hover {
-  opacity: 0.98;
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-3px);
+  opacity: 1;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.42));
 }
 
 .hero-slot-card img {
-  opacity: 0.7;
+  opacity: 0.56;
 }
 
 .hero-profile-card {
   position: relative;
-  width: min(100%, 320px);
-  height: 460px;
-  border: 1px solid #2380ff;
-  box-shadow:
-    0 0 0 1px rgba(35, 128, 255, 0.35),
-    0 38px 70px -48px rgba(0, 0, 0, 0.95);
+  width: min(100%, 372px);
+  height: 580px;
+  background: #0d0f14;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  filter: drop-shadow(0 0 1px rgba(255, 70, 85, 0.92));
   overflow: hidden;
+  transform: translateZ(0);
+  transition:
+    transform 300ms cubic-bezier(0.03, 0.98, 0.52, 0.99),
+    filter 220ms ease;
+}
+
+.hero-profile-card:hover {
+  filter:
+    drop-shadow(0 0 1.5px rgba(255, 102, 115, 1))
+    drop-shadow(0 6px 18px rgba(255, 70, 85, 0.16));
+}
+
+.hero-profile-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #ff4655 0%, #ff7a85 54%, rgba(255, 122, 133, 0) 100%);
+  z-index: 2;
 }
 
 .hero-profile-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 1;
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.92) 8%,
-    rgba(0, 0, 0, 0.4) 34%,
-    rgba(0, 0, 0, 0.08) 58%,
-    rgba(0, 0, 0, 0.06)
+    rgba(0, 0, 0, 0.95) 7%,
+    rgba(0, 0, 0, 0.58) 30%,
+    rgba(0, 0, 0, 0.22) 56%,
+    rgba(0, 0, 0, 0.08)
   );
 }
 
 .hero-profile-name {
   position: absolute;
-  inset-inline: 26px;
-  bottom: 28px;
+  inset-inline: 24px;
+  bottom: 20px;
   color: #fff;
-  font-size: 2rem;
-  font-weight: 750;
+  font-size: 2.35rem;
+  font-weight: 800;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  z-index: 2;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.78);
 }
 
 .hero-add-friends-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 260px;
-  height: 58px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  background: #ebebeb;
+  height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: #ececec;
   color: #121212;
-  font-size: 1.5rem;
+  font-size: 1.45rem;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
   transition:
     filter 180ms ease,
-    transform 180ms ease;
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.hero-add-friends-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: #ff4655;
+  opacity: 0.7;
 }
 
 .hero-add-friends-btn:hover {
-  filter: brightness(1.02);
-  transform: translateY(-1px);
+  filter: brightness(1.03);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 28px -20px rgba(0, 0, 0, 0.9);
 }
 
 @media (max-width: 1024px) {
+  .hero-cards-section {
+    min-height: 66vh;
+  }
+
+  .hero-cta-section {
+    height: 25vh;
+    min-height: 140px;
+  }
+
+  .hero-card-row {
+    gap: 1rem;
+  }
+
+  .hero-slot-card {
+    height: 404px;
+    width: 210px;
+  }
+
   .hero-profile-card {
-    width: min(100%, 300px);
-    height: 430px;
+    width: min(100%, 316px);
+    height: 492px;
   }
 
   .hero-profile-name {
-    inset-inline: 22px;
-    bottom: 22px;
-    font-size: 1.75rem;
+    inset-inline: 20px;
+    bottom: 16px;
+    font-size: 1.9rem;
   }
 }
 
 @media (max-width: 768px) {
+  .hero-lobby-layout {
+    padding-top: 6rem;
+  }
+
+  .hero-cards-section {
+    min-height: 64vh;
+  }
+
+  .hero-cta-section {
+    height: 24vh;
+    min-height: 126px;
+  }
+
+  .hero-card-row {
+    gap: 0;
+  }
+
   .hero-profile-card {
-    width: min(100%, 288px);
-    height: 395px;
+    width: min(100%, 316px);
+    height: 470px;
   }
 
   .hero-profile-name {
-    font-size: 1.5rem;
+    inset-inline: 18px;
+    bottom: 14px;
+    font-size: 1.78rem;
   }
 
   .hero-add-friends-btn {
