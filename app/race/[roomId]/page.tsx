@@ -245,11 +245,11 @@ export default function RaceRoomPage() {
 
   if (lobby === undefined) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-zinc-950">
+      <div className="h-screen w-screen flex items-center justify-center bg-[#090b0f]">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full"
+          className="w-16 h-16 border-4 border-[#ff4655] border-t-transparent rounded-full"
         />
       </div>
     )
@@ -257,13 +257,13 @@ export default function RaceRoomPage() {
 
   if (lobby === null) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center bg-zinc-950 px-4">
+      <div className="h-screen w-screen flex items-center justify-center bg-[#090b0f] px-4">
         <div className="text-center">
-          <p className="text-2xl font-bold text-zinc-300 mb-2">Room not found</p>
-          <p className="text-zinc-500 mb-6">This race room does not exist anymore.</p>
+          <p className="arena-heading text-5xl leading-none text-white mb-2">Room not found</p>
+          <p className="text-white/58 mb-6">This race room does not exist anymore.</p>
           <button
             onClick={() => router.push("/race")}
-            className="px-6 py-3 rounded-xl bg-cyan-500 text-white hover:bg-cyan-400 transition-colors"
+            className="arena-button px-6 py-3 font-semibold"
           >
             Back to Lobby
           </button>
@@ -273,11 +273,11 @@ export default function RaceRoomPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-zinc-950">
+    <div className="h-screen w-screen overflow-hidden bg-[#090b0f]">
       <div className="absolute top-4 left-4 z-50">
-        <div className="bg-zinc-900/80 backdrop-blur-sm rounded-xl px-4 py-2 border border-zinc-800">
-          <p className="text-xs text-zinc-500">Room Code</p>
-          <p className="text-xl font-bold text-cyan-400 tracking-wider">{lobby.roomCode}</p>
+        <div className="rounded-xl border border-white/14 bg-[#0f131b]/82 px-4 py-2 backdrop-blur-sm">
+          <p className="text-xs uppercase tracking-[0.09em] text-white/46">Room Code</p>
+          <p className="text-xl font-bold text-[#ff9da7] tracking-wider">{lobby.roomCode}</p>
         </div>
       </div>
 
@@ -289,7 +289,7 @@ export default function RaceRoomPage() {
         >
           <button
             onClick={startGame}
-            className="px-12 py-4 text-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-2xl hover:from-cyan-400 hover:to-blue-400 transition-all shadow-lg shadow-cyan-500/25"
+            className="arena-button px-12 py-4 text-xl font-bold shadow-[0_20px_42px_-20px_rgba(255,70,85,0.95)]"
           >
             Start Race
           </button>
@@ -347,15 +347,15 @@ export default function RaceRoomPage() {
       {(status === "racing" || status === "countdown") && (
         <div className="h-[40vh] w-full p-6">
           <div className="max-w-4xl mx-auto h-full flex flex-col">
-            <div className="flex-1 p-6 rounded-2xl bg-zinc-900/50 border border-zinc-800 overflow-hidden">
+            <div className="flex-1 overflow-hidden rounded-2xl border border-white/14 bg-[#0f141d]/70 p-6 backdrop-blur-sm">
               <div className="text-xl leading-relaxed font-mono tracking-wide">
                 {textToType.split("").map((char, index) => (
                   <span
                     key={index}
                     className={`
-                      ${index < currentIndex ? "text-cyan-400" : ""}
-                      ${index === currentIndex ? "text-white bg-cyan-500/30" : ""}
-                      ${index > currentIndex ? "text-zinc-600" : ""}
+                      ${index < currentIndex ? "text-[#ff9ea8]" : ""}
+                      ${index === currentIndex ? "text-white bg-[#ff4655]/32" : ""}
+                      ${index > currentIndex ? "text-white/28" : ""}
                     `}
                   >
                     {char === " " ? "\u00A0" : char}
@@ -373,7 +373,7 @@ export default function RaceRoomPage() {
             />
 
             {status === "racing" && (
-              <p className="text-center text-zinc-500 text-sm mt-4">Start typing to race!</p>
+              <p className="text-center text-white/50 text-sm mt-4">Start typing to race.</p>
             )}
           </div>
         </div>
@@ -385,11 +385,11 @@ export default function RaceRoomPage() {
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-6"
+              className="w-16 h-16 border-4 border-[#ff4655] border-t-transparent rounded-full mx-auto mb-6"
             />
-            <p className="text-2xl font-bold text-zinc-300 mb-2">Waiting for opponent...</p>
-            <p className="text-zinc-500">
-              Share the room code: <span className="text-cyan-400 font-bold">{lobby.roomCode}</span>
+            <p className="arena-heading text-5xl leading-none text-white mb-2">Waiting for opponent...</p>
+            <p className="text-white/58">
+              Share the room code: <span className="font-bold text-[#ff9ea8]">{lobby.roomCode}</span>
             </p>
           </div>
         </div>

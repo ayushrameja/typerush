@@ -1,258 +1,191 @@
 'use client';
 
 import Link from 'next/link';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useConvexAuth, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { GridBackground } from './GridBackground';
 import { useUserStore } from '@/lib/stores/userStore';
+import { UserAvatar } from '@/components/ui/UserAvatar';
 
-function ValorantCard({
-  mode,
-  title,
-}: {
-  mode: 'duo' | 'trio';
-  title: string;
-}) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const mx = useMotionValue(0.5);
-  const my = useMotionValue(0.5);
-
-  const rxRaw = useTransform(my, [0, 1], [10, -10]);
-  const ryRaw = useTransform(mx, [0, 1], [-14, 14]);
-  const rx = useSpring(rxRaw, { stiffness: 260, damping: 22, mass: 0.6 });
-  const ry = useSpring(ryRaw, { stiffness: 260, damping: 22, mass: 0.6 });
-
-  const copy = useMemo(() => {
-    if (mode === 'duo') {
-      return {
-        eyebrow: 'Two-stack',
-        headline: 'Bring your pocket Sage.',
-        body: 'One aims. One panics. Both blame ping.',
-        footer: 'Queue up and pretend it was "comms".',
-      };
-    }
-    return {
-      eyebrow: 'Three-stack',
-      headline: 'Triple utility. Zero discipline.',
-      body: 'Three duelists, one smoke, and a dream.',
-      footer: 'If it fails, call it "limit testing".',
-    };
-  }, [mode]);
-
-  return (
-    <div className="hidden lg:block perspective-1000">
-      <motion.div
-        ref={cardRef}
-        style={{ rotateX: rx, rotateY: ry }}
-        onMouseMove={(e) => {
-          const rect = cardRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          const x = (e.clientX - rect.left) / rect.width;
-          const y = (e.clientY - rect.top) / rect.height;
-          mx.set(Math.min(1, Math.max(0, x)));
-          my.set(Math.min(1, Math.max(0, y)));
-        }}
-        onMouseLeave={() => {
-          mx.set(0.5);
-          my.set(0.5);
-        }}
-        whileHover={{ y: -6, transition: { duration: 0.18 } }}
-        className="transform-style-3d relative w-[300px] rounded-3xl glass-panel overflow-hidden shadow-[0_30px_120px_-60px_rgba(0,0,0,0.95)]"
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(255,255,255,0.08),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_90%,rgba(245,165,36,0.15),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),transparent_32%,transparent_68%,rgba(245,165,36,0.06))]" />
-
-        <div className="relative p-5 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-[11px] text-white/55 uppercase tracking-[0.22em]">
-                {copy.eyebrow}
-              </div>
-              <div className="mt-3 text-xl text-white font-semibold tracking-tight">
-                {title}
-              </div>
-              <div className="mt-2 text-[15px] text-white/85 leading-snug whitespace-nowrap">
-                {copy.headline}
-              </div>
-              <div className="mt-2 text-sm text-white/55 leading-relaxed">
-                {copy.body}
-              </div>
-            </div>
-            <div className="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/60">
-              Queue
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-function PlayerCard() {
+export function HeroLobby() {
   const user = useUserStore((state) => state.user);
   const { isAuthenticated } = useConvexAuth();
   const stats = useQuery(api.practice.getStats, isAuthenticated ? {} : 'skip');
 
   const displayName = user?.name ?? 'Guest Player';
-  const subtitle = user ? 'Online' : 'Demo Mode';
-  const avatarContent = user?.avatarUrl ? (
-    <img
-      src={user.avatarUrl}
-      alt={displayName}
-      className="h-14 w-14 rounded-2xl object-cover"
-    />
-  ) : (
-    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-white/15 to-white/5 border border-white/15 flex items-center justify-center text-2xl text-white/90">
-      👤
-    </div>
-  );
+  const subtitle = user ? 'Online' : 'Practice Mode';
 
   return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.01, transition: { duration: 0.2 } }}
-      className="relative w-full max-w-sm rounded-3xl glass-panel overflow-hidden"
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.12),transparent_55%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_100%,rgba(245,165,36,0.22),transparent_55%)]" />
-
-      <div className="relative p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              {avatarContent}
-              <div className={`absolute -bottom-1 -right-1 h-4 w-4 rounded-full border-2 border-black ${user ? 'bg-emerald-500' : 'bg-zinc-500'}`} />
-            </div>
-            <div>
-              <div className="text-lg font-semibold text-white tracking-tight">
-                {displayName}
-              </div>
-              <div className="text-sm text-white/55">{subtitle}</div>
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-semibold text-white">
-              {stats?.bestWpm ?? '—'}
-            </div>
-            <div className="text-xs text-white/45">Best WPM</div>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">
-              {stats?.avgWpm ?? '—'}
-            </div>
-            <div className="text-[11px] text-white/45">Avg WPM</div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">
-              {stats?.totalSessions ?? 0}
-            </div>
-            <div className="text-[11px] text-white/45">Sessions</div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <div className="text-lg font-semibold text-white">
-              {stats?.accuracy ? `${stats.accuracy}%` : '—'}
-            </div>
-            <div className="text-[11px] text-white/45">Accuracy</div>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-export function HeroLobby() {
-  const user = useUserStore((state) => state.user);
-
-  return (
-    <div className="relative min-h-screen flex items-center justify-center px-4">
+    <div className="arena-shell flex min-h-screen items-center justify-center px-4">
       <GridBackground />
 
-      <div className="relative w-full max-w-7xl mx-auto pt-28 pb-16">
+      <div className="relative mx-auto w-full max-w-5xl pb-16 pt-28">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
           className="text-center"
         >
-          <div className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
-            {user ? 'Ready to race' : 'Demo mode'}
-            <span className="text-white/40">•</span>
-            {user ? 'Multiplayer & Practice' : 'Practice available'}
+          <div className="arena-chip">
+            {user ? 'Multiplayer + Practice Ready' : 'Practice Available'}
           </div>
-
-          <h1 className="mt-6 text-5xl md:text-6xl font-semibold tracking-tight text-white">
-            Ready for the duo or trio?
-          </h1>
-          <p className="mt-4 text-white/60 max-w-xl mx-auto">
-            No crosshair needed. Lock in your warmup and outtype the lobby.
-          </p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut', delay: 0.08 }}
-          className="mt-12 grid items-center justify-center gap-10 lg:gap-12 lg:grid-cols-[300px_minmax(0,420px)_300px]"
+          className="relative mt-16"
         >
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.35 }}
+          <h1
+            className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-[58%] select-none text-center arena-heading text-[6rem] leading-[0.85] md:text-[9rem] lg:text-[12rem]"
+            aria-hidden="true"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(255,70,85,0.55), rgba(255,70,85,0.03))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
           >
-            <ValorantCard
-              mode="duo"
-              title="Duo queue"
-            />
-          </motion.div>
+            Tactical
+            <br />
+            Typing
+          </h1>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col items-center"
+          <div className="relative z-10 flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.35, duration: 0.5 }}
+              className="relative z-0 -mr-4 hidden h-[280px] w-[76px] shrink-0 flex-col items-center justify-center border border-white/8 bg-[linear-gradient(135deg,rgba(15,18,24,0.94),rgba(8,11,18,0.85))] backdrop-blur-xl lg:flex"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_100%_50%,rgba(255,70,85,0.1),transparent_70%)]" />
+              <span className="arena-heading [writing-mode:vertical-rl] rotate-180 text-[1.8rem] tracking-[0.3em] text-white/25">
+                Duo
+              </span>
+              <span className="absolute bottom-3 [writing-mode:vertical-rl] rotate-180 text-[8px] uppercase tracking-[0.2em] text-white/18">
+                2-Player
+              </span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="relative z-10 w-full max-w-[520px] border border-white/10 bg-[linear-gradient(145deg,rgba(15,18,24,0.92),rgba(8,11,18,0.8))] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9)] backdrop-blur-xl"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,255,0.06),transparent_50%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_100%,rgba(255,70,85,0.1),transparent_50%)]" />
+
+              <div className="relative p-8">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-5">
+                    <div className="relative shrink-0">
+                      <UserAvatar
+                        src={user?.avatarUrl}
+                        name={displayName}
+                        className="h-[88px] w-[88px] border border-white/14 shadow-[0_0_30px_rgba(255,70,85,0.12)]"
+                        fallbackClassName="bg-[linear-gradient(145deg,rgba(255,255,255,0.2),rgba(255,255,255,0.06))] text-2xl font-semibold text-white/90"
+                      />
+                      <div
+                        className={`absolute -bottom-1 -right-1 h-4 w-4 border-2 border-[#0b0d10] ${
+                          user ? 'bg-[#73e78d]' : 'bg-white/30'
+                        }`}
+                      />
+                      <div className="pointer-events-none absolute -inset-px border border-white/8" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-xl font-semibold tracking-tight text-white">
+                        {displayName}
+                      </div>
+                      <div className="mt-1 text-sm text-white/46">{subtitle}</div>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <div className="text-5xl font-bold leading-none text-[#ff9ea7]">
+                      {stats?.bestWpm ?? '—'}
+                    </div>
+                    <div className="mt-2 text-[10px] uppercase tracking-[0.16em] text-white/36">
+                      Best WPM
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 grid grid-cols-3 gap-3">
+                  {[
+                    { value: stats?.avgWpm ?? '—', label: 'Avg WPM' },
+                    { value: stats?.totalSessions ?? 0, label: 'Sessions' },
+                    { value: stats?.accuracy ? `${stats.accuracy}%` : '—', label: 'Accuracy' },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="border border-white/8 bg-white/[0.03] p-4 text-center"
+                    >
+                      <div className="text-2xl font-semibold text-white">{stat.value}</div>
+                      <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/36">
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.45, duration: 0.5 }}
+              className="relative z-0 -ml-4 hidden h-[280px] w-[76px] shrink-0 flex-col items-center justify-center border border-white/8 bg-[linear-gradient(225deg,rgba(15,18,24,0.94),rgba(8,11,18,0.85))] backdrop-blur-xl lg:flex"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_0%_50%,rgba(255,70,85,0.1),transparent_70%)]" />
+              <span className="arena-heading [writing-mode:vertical-rl] text-[1.8rem] tracking-[0.3em] text-white/25">
+                Trio
+              </span>
+              <span className="absolute bottom-3 [writing-mode:vertical-rl] text-[8px] uppercase tracking-[0.2em] text-white/18">
+                3-Player
+              </span>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+          className="mx-auto mt-10 max-w-lg text-center text-[0.95rem] leading-relaxed text-white/46"
+        >
+          Warm up solo, queue with friends, and keep your WPM from falling apart in public.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.4 }}
+          className="mt-8 flex items-center justify-center gap-4"
+        >
+          <Link
+            href="/practice"
+            className="cursor-pointer border border-white/16 bg-white/[0.04] px-8 py-4 text-[0.9rem] font-semibold tracking-wide text-white/88 transition-all duration-200 hover:border-white/28 hover:bg-white/8 hover:text-white"
           >
-            <PlayerCard />
-
-            <div className="mt-8 flex items-center gap-4">
-              {user ? (
-                <Link
-                  href="/race"
-                  className="px-8 py-4 rounded-2xl bg-white/20 text-white/90 font-medium tracking-tight hover:bg-white/30 transition-colors"
-                >
-                  Play Multiplayer
-                </Link>
-              ) : (
-                <Link
-                  href="/login"
-                  className="px-8 py-4 rounded-2xl bg-white/10 text-white/70 font-medium tracking-tight hover:bg-white/20 transition-colors"
-                >
-                  Sign in for Multiplayer
-                </Link>
-              )}
-              <Link
-                href="/practice"
-                className="px-6 py-4 rounded-2xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
-              >
-                Practice
-              </Link>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.45 }}
-          >
-            <ValorantCard
-              mode="trio"
-              title="Trio queue"
-            />
-          </motion.div>
+            Practice
+          </Link>
+          {user ? (
+            <Link
+              href="/race"
+              className="cursor-pointer bg-[linear-gradient(120deg,var(--accent),var(--accent-strong))] px-8 py-4 text-[0.9rem] font-semibold tracking-wide text-white transition-all duration-200 hover:shadow-[0_14px_30px_-18px_rgba(255,70,85,0.8)] hover:brightness-110"
+            >
+              Create Room
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="cursor-pointer border border-white/16 bg-white/[0.04] px-8 py-4 text-[0.9rem] font-semibold tracking-wide text-white/88 transition-all duration-200 hover:border-white/28 hover:bg-white/8 hover:text-white"
+            >
+              Sign in for Multiplayer
+            </Link>
+          )}
         </motion.div>
       </div>
     </div>

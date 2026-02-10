@@ -14,19 +14,19 @@ interface ButtonProps extends Omit<HTMLMotionProps<"button">, "size"> {
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:from-cyan-400 hover:to-blue-400 shadow-lg shadow-cyan-500/25",
+    "arena-button text-white shadow-[0_18px_34px_-22px_rgba(255,70,85,0.95)]",
   secondary:
-    "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700",
+    "arena-button-secondary",
   ghost:
-    "bg-transparent text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50",
+    "bg-transparent text-white/65 hover:text-white hover:bg-white/8 border border-transparent hover:border-white/12",
   danger:
-    "bg-gradient-to-r from-red-500 to-pink-500 text-white hover:from-red-400 hover:to-pink-400",
+    "bg-gradient-to-r from-[#ff5968] to-[#e53347] text-white border border-[#ff7b87]/40 hover:brightness-110",
 }
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-5 py-2.5 text-base",
-  lg: "px-8 py-3.5 text-lg",
+  sm: "px-3 py-1.5 text-sm rounded-xl",
+  md: "px-5 py-2.5 text-base rounded-2xl",
+  lg: "px-8 py-3.5 text-lg rounded-2xl",
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -48,7 +48,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         whileHover={{ scale: disabled ? 1 : 1.02 }}
         whileTap={{ scale: disabled ? 1 : 0.98 }}
         className={`
-          relative font-medium rounded-xl transition-all duration-200
+          relative font-semibold tracking-wide transition-all duration-200
           disabled:opacity-50 disabled:cursor-not-allowed
           ${variantStyles[variant]}
           ${sizeStyles[size]}

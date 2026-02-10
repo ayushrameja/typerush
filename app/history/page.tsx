@@ -36,10 +36,10 @@ export default function HistoryPage() {
 
   if (isLoading) {
     return (
-      <div className="relative min-h-screen">
+      <div className="arena-shell">
         <GridBackground />
-        <div className="relative min-h-screen px-4 pt-28 pb-20">
-          <div className="max-w-4xl mx-auto">
+        <div className="relative min-h-screen px-4 pb-20 pt-28">
+          <div className="mx-auto max-w-4xl">
             <HistorySkeleton />
           </div>
         </div>
@@ -49,21 +49,14 @@ export default function HistoryPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="relative min-h-screen">
+      <div className="arena-shell">
         <GridBackground />
-        <div className="relative min-h-screen px-4 pt-28 pb-20 flex items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
-          >
-            <div className="text-6xl mb-6">🔒</div>
-            <h1 className="text-3xl font-semibold text-white mb-3">Sign in to view history</h1>
-            <p className="text-white/60 mb-8">Your practice sessions will be saved when you&apos;re logged in.</p>
-            <Link
-              href="/login"
-              className="px-8 py-4 rounded-2xl bg-[#f5a524] text-black font-medium hover:bg-[#f7b64a] transition-colors"
-            >
+        <div className="relative flex min-h-screen items-center justify-center px-4 pb-20 pt-28">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+            <div className="mb-6 text-6xl">🔒</div>
+            <h1 className="arena-heading text-6xl leading-none text-white">Sign in to view history</h1>
+            <p className="mb-8 mt-3 text-white/60">Your practice sessions are saved when you&apos;re logged in.</p>
+            <Link href="/login" className="arena-button px-8 py-4 font-semibold tracking-wide">
               Sign in
             </Link>
           </motion.div>
@@ -73,42 +66,34 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="relative min-h-screen">
+    <div className="arena-shell">
       <GridBackground />
-      <div className="relative min-h-screen px-4 pt-28 pb-20">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="text-center mb-10">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                Your stats
-              </div>
-              <h1 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight text-white">
-                History
-              </h1>
-              <p className="mt-3 text-white/60">Track your typing journey</p>
+      <div className="relative min-h-screen px-4 pb-20 pt-28">
+        <div className="mx-auto max-w-4xl">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <div className="mb-10 text-center">
+              <div className="arena-chip">Your stats</div>
+              <h1 className="arena-heading mt-4 text-7xl leading-none text-white md:text-8xl">History</h1>
+              <p className="mt-3 text-white/60">Track your typing progression.</p>
             </div>
 
             {stats && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                <div className="glass-panel rounded-2xl p-5 text-center">
+              <div className="mb-10 grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="arena-card rounded-2xl p-5 text-center">
                   <div className="text-3xl font-bold text-white">{stats.avgWpm}</div>
-                  <div className="text-sm text-white/50 mt-1">Avg WPM</div>
+                  <div className="mt-1 text-sm text-white/50">Avg WPM</div>
                 </div>
-                <div className="glass-panel rounded-2xl p-5 text-center">
-                  <div className="text-3xl font-bold text-[#f5a524]">{stats.bestWpm}</div>
-                  <div className="text-sm text-white/50 mt-1">Best WPM</div>
+                <div className="arena-card rounded-2xl p-5 text-center">
+                  <div className="text-3xl font-bold text-[#ff9ea7]">{stats.bestWpm}</div>
+                  <div className="mt-1 text-sm text-white/50">Best WPM</div>
                 </div>
-                <div className="glass-panel rounded-2xl p-5 text-center">
+                <div className="arena-card rounded-2xl p-5 text-center">
                   <div className="text-3xl font-bold text-white">{stats.totalSessions}</div>
-                  <div className="text-sm text-white/50 mt-1">Sessions</div>
+                  <div className="mt-1 text-sm text-white/50">Sessions</div>
                 </div>
-                <div className="glass-panel rounded-2xl p-5 text-center">
+                <div className="arena-card rounded-2xl p-5 text-center">
                   <div className="text-3xl font-bold text-white">{stats.accuracy}%</div>
-                  <div className="text-sm text-white/50 mt-1">Accuracy</div>
+                  <div className="mt-1 text-sm text-white/50">Accuracy</div>
                 </div>
               </div>
             )}
@@ -118,15 +103,12 @@ export default function HistoryPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="glass-panel rounded-3xl p-12 text-center"
+                className="arena-card rounded-3xl p-12 text-center"
               >
-                <div className="text-5xl mb-4">⌨️</div>
+                <div className="mb-4 text-5xl">⌨️</div>
                 <h2 className="text-xl font-semibold text-white mb-2">No sessions yet</h2>
-                <p className="text-white/50 mb-6">Complete a practice session to see your history here.</p>
-                <Link
-                  href="/practice"
-                  className="inline-flex px-6 py-3 rounded-2xl bg-[#f5a524] text-black font-medium hover:bg-[#f7b64a] transition-colors"
-                >
+                <p className="mb-6 text-white/50">Complete a practice session to populate this board.</p>
+                <Link href="/practice" className="arena-button inline-flex px-6 py-3 font-semibold tracking-wide">
                   Start Practicing
                 </Link>
               </motion.div>
@@ -138,11 +120,11 @@ export default function HistoryPage() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04 }}
-                    className="glass-panel rounded-2xl p-5 hover:bg-white/[0.04] transition-colors"
+                    className="arena-card rounded-2xl p-5 transition-colors hover:bg-white/[0.08]"
                   >
                     <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-5 min-w-0">
-                        <div className="shrink-0 w-16 text-center">
+                      <div className="flex min-w-0 items-center gap-5">
+                        <div className="w-16 shrink-0 text-center">
                           <div className="text-2xl font-bold text-white">{session.wpm}</div>
                           <div className="text-[11px] text-white/45">WPM</div>
                         </div>
@@ -150,29 +132,27 @@ export default function HistoryPage() {
                         <div className="flex items-center gap-6 text-sm">
                           <div>
                             <span className="text-white/40">Accuracy </span>
-                            <span className="text-white font-medium">{session.accuracy}%</span>
+                            <span className="font-medium text-white">{session.accuracy}%</span>
                           </div>
                           <div>
                             <span className="text-white/40">Time </span>
-                            <span className="text-white font-medium">{formatDuration(session.timeUsed)}</span>
+                            <span className="font-medium text-white">{formatDuration(session.timeUsed)}</span>
                           </div>
                           <div>
                             <span className="text-white/40">Words </span>
-                            <span className="text-white font-medium">{session.totalWords}</span>
+                            <span className="font-medium text-white">{session.totalWords}</span>
                           </div>
                           <div className="hidden sm:block">
                             <span className="text-white/40">Mistakes </span>
-                            <span className="text-red-400 font-medium">{session.mistakes}</span>
+                            <span className="font-medium text-[#ff7e8b]">{session.mistakes}</span>
                           </div>
                         </div>
                       </div>
                       <div className="shrink-0 flex items-center gap-3">
-                        <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full border border-white/10 bg-white/5 text-[11px] text-white/50 capitalize">
+                        <span className="hidden rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] capitalize text-white/50 sm:inline-flex">
                           {session.difficulty}
                         </span>
-                        <span className="text-xs text-white/35">
-                          {formatDate(session.completedAt)}
-                        </span>
+                        <span className="text-xs text-white/35">{formatDate(session.completedAt)}</span>
                       </div>
                     </div>
                   </motion.div>
@@ -189,14 +169,14 @@ export default function HistoryPage() {
 function HistorySkeleton() {
   return (
     <div className="animate-pulse space-y-8">
-      <div className="text-center space-y-3">
+      <div className="space-y-3 text-center">
         <div className="mx-auto h-6 w-24 rounded-full bg-white/10" />
         <div className="mx-auto h-10 w-40 rounded-full bg-white/10" />
         <div className="mx-auto h-4 w-48 rounded-full bg-white/5" />
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="glass-panel rounded-2xl p-5 text-center">
+          <div key={i} className="arena-card rounded-2xl p-5 text-center">
             <div className="mx-auto h-8 w-16 rounded-full bg-white/10" />
             <div className="mx-auto mt-2 h-4 w-12 rounded-full bg-white/5" />
           </div>
@@ -204,7 +184,7 @@ function HistorySkeleton() {
       </div>
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="glass-panel rounded-2xl p-5">
+          <div key={i} className="arena-card rounded-2xl p-5">
             <div className="h-10 rounded-xl bg-white/5" />
           </div>
         ))}

@@ -6,22 +6,14 @@ import { GridBackground } from "@/components/home/GridBackground"
 
 export default function LeaderboardPage() {
   return (
-    <div className="relative min-h-screen px-4 pt-28 pb-20">
+    <div className="arena-shell px-4 pb-20 pt-28">
       <GridBackground />
-      <div className="relative max-w-4xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs text-white/70">
-            Coming soon
-          </div>
-          <h1 className="mt-5 text-4xl md:text-5xl font-semibold tracking-tight text-white">
-            Leaderboards
-          </h1>
-          <p className="text-white/60 mt-2 max-w-md mx-auto">
-            Global rankings are coming with our Convex migration. Stay tuned!
+      <div className="relative mx-auto max-w-4xl">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+          <div className="arena-chip">Coming soon</div>
+          <h1 className="arena-heading mt-5 text-7xl leading-none text-white md:text-8xl">Leaderboards</h1>
+          <p className="mx-auto mt-2 max-w-md text-white/60">
+            Global rankings are on the roadmap. For now, sharpen your speed in practice and race rooms.
           </p>
         </motion.div>
 
@@ -31,19 +23,13 @@ export default function LeaderboardPage() {
           transition={{ delay: 0.2 }}
           className="mt-12"
         >
-          <div className="glass-panel rounded-[32px] p-12 text-center">
-            <div className="text-6xl mb-6">🏆</div>
-            <h2 className="text-2xl font-semibold text-white mb-4">
-              Leaderboards Coming Soon
-            </h2>
-            <p className="text-white/60 max-w-md mx-auto mb-8">
-              We&apos;re migrating to Convex for real-time leaderboards. 
-              In the meantime, practice your typing skills!
+          <div className="arena-card rounded-[32px] p-12 text-center">
+            <div className="mb-6 text-6xl">🏆</div>
+            <h2 className="arena-heading text-5xl leading-none text-white">Leaderboard Coming Soon</h2>
+            <p className="mx-auto mb-8 mt-4 max-w-md text-white/60">
+              Real-time rankings are being wired up with Convex. Until then, keep farming clean runs.
             </p>
-            <Link
-              href="/practice"
-              className="inline-flex px-8 py-4 rounded-2xl bg-white text-black font-medium hover:bg-white/90 transition-colors"
-            >
+            <Link href="/practice" className="arena-button inline-flex px-8 py-4 font-semibold tracking-wide">
               Go to Practice
             </Link>
           </div>
@@ -53,22 +39,22 @@ export default function LeaderboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6"
+          className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3"
         >
-          <div className="glass-panel rounded-[32px] p-6 text-center">
-            <div className="text-4xl mb-4">🥇</div>
-            <div className="text-lg font-semibold text-white/50">1st Place</div>
-            <div className="text-sm text-white/30 mt-1">Coming soon</div>
+          <div className="arena-card rounded-[32px] p-6 text-center">
+            <div className="mb-4 text-4xl">🥇</div>
+            <div className="text-lg font-semibold text-white/60">1st Place</div>
+            <div className="mt-1 text-sm text-white/35">Coming soon</div>
           </div>
-          <div className="glass-panel rounded-[32px] p-6 text-center">
-            <div className="text-4xl mb-4">🥈</div>
-            <div className="text-lg font-semibold text-white/50">2nd Place</div>
-            <div className="text-sm text-white/30 mt-1">Coming soon</div>
+          <div className="arena-card rounded-[32px] p-6 text-center">
+            <div className="mb-4 text-4xl">🥈</div>
+            <div className="text-lg font-semibold text-white/60">2nd Place</div>
+            <div className="mt-1 text-sm text-white/35">Coming soon</div>
           </div>
-          <div className="glass-panel rounded-[32px] p-6 text-center">
-            <div className="text-4xl mb-4">🥉</div>
-            <div className="text-lg font-semibold text-white/50">3rd Place</div>
-            <div className="text-sm text-white/30 mt-1">Coming soon</div>
+          <div className="arena-card rounded-[32px] p-6 text-center">
+            <div className="mb-4 text-4xl">🥉</div>
+            <div className="text-lg font-semibold text-white/60">3rd Place</div>
+            <div className="mt-1 text-sm text-white/35">Coming soon</div>
           </div>
         </motion.div>
       </div>

@@ -39,7 +39,7 @@ export function NeonTunnel({ speed = 1 }: NeonTunnelProps) {
     <group ref={tunnelRef}>
       <ambientLight intensity={0.1} />
       
-      <fog attach="fog" args={["#09090b", 10, 100]} />
+      <fog attach="fog" args={["#090b10", 10, 100]} />
 
       <group ref={ringsRef}>
         {rings.map((ring, i) => (
@@ -51,7 +51,7 @@ export function NeonTunnel({ speed = 1 }: NeonTunnelProps) {
           >
             <torusGeometry args={[4, 0.03, 8, 64]} />
             <meshBasicMaterial
-              color={i % 3 === 0 ? "#22d3ee" : i % 3 === 1 ? "#3b82f6" : "#a855f7"}
+              color={i % 3 === 0 ? "#ff4655" : i % 3 === 1 ? "#ff7a86" : "#ffffff"}
               transparent
               opacity={0.6}
             />
@@ -61,11 +61,11 @@ export function NeonTunnel({ speed = 1 }: NeonTunnelProps) {
 
       <mesh position={[0, 0, -60]} rotation={[0, 0, 0]}>
         <circleGeometry args={[20, 32]} />
-        <meshBasicMaterial color="#22d3ee" transparent opacity={0.05} />
+        <meshBasicMaterial color="#ff4655" transparent opacity={0.05} />
       </mesh>
 
       <gridHelper
-        args={[200, 40, "#22d3ee", "#1e3a5f"]}
+        args={[200, 40, "#ff6674", "#3a2024"]}
         position={[0, -4, -50]}
         rotation={[0, 0, 0]}
       />
