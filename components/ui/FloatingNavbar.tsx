@@ -191,6 +191,128 @@ function MobileNavItem({
   );
 }
 
+function RightSidePanel({
+  pathname,
+  isAuthenticated,
+  displayName,
+  email,
+  onSignOut,
+}: {
+  pathname: string | null;
+  isAuthenticated: boolean;
+  displayName: string;
+  email: string;
+  onSignOut: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (!expanded) return;
+      if (!panelRef.current?.contains(e.target as Node)) {
+        setExpanded(false);
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [expanded]);
+
+  return (
+    <div className="pointer-events-none fixed right-0 top-0 z-52 hidden h-screen lg:flex">
+      <div
+        ref={panelRef}
+        className={`core-right-rail pointer-events-auto ${expanded ? "core-right-rail--expanded" : ""}`}
+      >
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="core-rail-toggle"
+          aria-label={expanded ? "Collapse panel" : "Expand panel"}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`h-4 w-4 text-white/60 transition-transform duration-260 ${expanded ? "rotate-180" : ""}`}
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+
+        <div className="core-rail-divider" />
+
+        <Link
+          href="/settings"
+          aria-label="Settings"
+          title="Settings"
+          data-active={isActivePath(pathname, "/settings")}
+          className="core-rail-action"
+        >
+          <AssetIcon
+            src="/assets/icons/settings.svg"
+            label="Settings"
+            className="core-rail-icon"
+          />
+          <span className="core-rail-label">Settings</span>
+        </Link>
+
+        <Link
+          href={isAuthenticated ? "/race" : "/login"}
+          aria-label="Friends"
+          title="Friends"
+          className="core-rail-action"
+        >
+          <AssetIcon
+            src="/assets/icons/friends.svg"
+            label="Friends"
+            className="core-rail-icon"
+          />
+          <span className="core-rail-label">Friends</span>
+        </Link>
+
+        <div className="core-rail-divider" />
+
+        {isAuthenticated ? (
+          <div className="core-rail-user-section">
+            <div className="core-rail-user-info">
+              <div className="text-xs font-semibold text-white truncate">{displayName}</div>
+              <div className="text-[10px] text-white/50 truncate">{email}</div>
+            </div>
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="core-rail-action-btn"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="core-rail-icon">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span className="core-rail-label">Logout</span>
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="core-rail-action-btn"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="core-rail-icon">
+              <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+              <polyline points="10 17 15 12 10 7" />
+              <line x1="15" y1="12" x2="3" y2="12" />
+            </svg>
+            <span className="core-rail-label">Sign in</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function FloatingNavbar() {
   const pathname = usePathname();
   const { isAuthenticated } = useConvexAuth();
@@ -256,17 +378,17 @@ export function FloatingNavbar() {
         {isCoreShellRoute
           ? (
             <div className="relative flex h-[60px] items-center px-4 md:px-[60px]">
-              <div className="w-[150px] shrink-0">
+              <div className="flex h-full w-[150px] shrink-0 items-end pb-2">
                 <Link
                   href="/"
-                  className="inline-flex cursor-pointer items-center text-2xl leading-none font-extrabold tracking-tight text-white/90 transition-opacity duration-200 hover:opacity-80"
+                  className="inline-flex cursor-pointer text-2xl leading-none font-extrabold tracking-tight text-white/90 transition-opacity duration-200 hover:opacity-80"
                 >
                   Typerush
                 </Link>
               </div>
               <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
                 <nav className="core-shell-nav">
-                  <div className="flex items-center justify-center pl-10 pr-4 gap-4">
+                  <div className="flex items-center justify-center pr-4 pl-10 gap-4">
                     <CoreNavIcon pathname={pathname} item={leftMainNav[0]} />
                     <CoreNavIcon pathname={pathname} item={leftMainNav[1]} />
                   </div>
@@ -486,84 +608,13 @@ export function FloatingNavbar() {
       </motion.header>
       {isCoreShellRoute
         ? (
-          <div className="pointer-events-none fixed right-0 top-0 z-[52] hidden h-screen lg:flex">
-            <div className="core-right-rail pointer-events-auto">
-              <Link
-                href="/settings"
-                aria-label="Settings"
-                title="Settings"
-                data-active={isActivePath(pathname, "/settings")}
-                className="core-rail-action"
-              >
-                <AssetIcon
-                  src="/assets/icons/settings.svg"
-                  label="Settings"
-                  className="h-[20px] w-[20px]"
-                />
-              </Link>
-
-              <div className="relative" ref={userMenuRef}>
-                <button
-                  type="button"
-                  onClick={() => setUserMenuOpen((value) => !value)}
-                  aria-label="User menu"
-                  data-active={userMenuOpen}
-                  className="core-rail-action"
-                >
-                  <AssetIcon
-                    src="/assets/icons/friends.svg"
-                    label="User menu"
-                    className="h-[21px] w-[21px]"
-                  />
-                </button>
-
-                <AnimatePresence>
-                  {userMenuOpen
-                    ? (
-                      <motion.div
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 10 }}
-                        transition={{ duration: 0.16 }}
-                        className="absolute right-[calc(100%+10px)] top-0 z-40 w-[240px] border border-white/14 bg-[#0f131a]/94 p-3 backdrop-blur-2xl"
-                      >
-                        <div className="border-b border-white/12 pb-3">
-                          <div className="text-sm font-semibold text-white">
-                            {displayName}
-                          </div>
-                          <div className="mt-1 truncate text-xs text-white/62">
-                            {email}
-                          </div>
-                        </div>
-
-                        {isAuthenticated
-                          ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setUserMenuOpen(false);
-                                void signOut();
-                              }}
-                              className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
-                            >
-                              Logout
-                            </button>
-                          )
-                          : (
-                            <Link
-                              href="/login"
-                              className="dropdown-fx mt-3 inline-flex w-full cursor-pointer items-center justify-center border border-white/14 px-3 py-2 text-xs font-semibold capitalize tracking-[0.06em] text-white/78 transition-all duration-200 hover:border-white/26 hover:bg-white/8 hover:text-white"
-                            >
-                              Login
-                            </Link>
-                          )}
-                      </motion.div>
-                    )
-                    : null}
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
+          <RightSidePanel
+            pathname={pathname}
+            isAuthenticated={isAuthenticated}
+            displayName={displayName}
+            email={email}
+            onSignOut={() => void signOut()}
+          />
         )
         : null}
 
