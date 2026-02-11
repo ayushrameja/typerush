@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 
 interface LobbyLeaveWarningProps {
   isOpen: boolean
-  onConfirm: () => void
+  onConfirm: () => Promise<void> | void
   onCancel: () => void
 }
 
@@ -45,7 +45,9 @@ export function LobbyLeaveWarning({ isOpen, onConfirm, onCancel }: LobbyLeaveWar
                 Cancel
               </button>
               <button
-                onClick={onConfirm}
+                onClick={() => {
+                  void onConfirm()
+                }}
                 className="arena-button flex-1 px-4 py-3 font-semibold"
               >
                 Sign in & Leave

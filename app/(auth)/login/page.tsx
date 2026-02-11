@@ -34,15 +34,19 @@ export default function LoginPage() {
     void signIn("google")
   }, [currentLobbyId, signIn])
 
-  const handleConfirmLeave = useCallback(() => {
+  const handleConfirmLeave = useCallback(async () => {
     setShowLeaveWarning(false)
     if (identity) {
-      removePresence({
-        playerId: identity.playerId,
-        playerToken: identity.token ?? undefined,
-      }).catch(() => {})
+      try {
+        await removePresence({
+          playerId: identity.playerId,
+          playerToken: identity.token ?? undefined,
+        })
+      } catch (error) {
+        console.error("Failed to remove presence before sign-in", error)
+      }
     }
-    void signIn("google")
+    await signIn("google")
   }, [identity, removePresence, signIn])
 
   return (
