@@ -58,30 +58,36 @@ export function useAnonymousIdentity() {
 
     if (!hasInitialized.current) {
       hasInitialized.current = true
-      void registerAnonymous({}).then((result) => {
-        const newAnon = {
-          token: result.token,
-          playerId: result.playerId,
-          username: result.username,
-          discriminator: result.discriminator,
-          avatarSeed: result.avatarSeed,
-          createdAt: Date.now(),
-        }
-        saveStoredAnon(newAnon)
+      void registerAnonymous({})
+        .then((result) => {
+          const newAnon = {
+            token: result.token,
+            playerId: result.playerId,
+            username: result.username,
+            discriminator: result.discriminator,
+            avatarSeed: result.avatarSeed,
+            createdAt: Date.now(),
+          }
+          saveStoredAnon(newAnon)
 
-        setIdentity({
-          playerId: result.playerId,
-          username: result.username,
-          discriminator: result.discriminator,
-          avatarSeed: result.avatarSeed,
-          isAuthenticated: false,
-          token: result.token,
-          email: null,
-          avatarUrl: null,
-          displayName: `${result.username}#${result.discriminator}`,
+          setIdentity({
+            playerId: result.playerId,
+            username: result.username,
+            discriminator: result.discriminator,
+            avatarSeed: result.avatarSeed,
+            isAuthenticated: false,
+            token: result.token,
+            email: null,
+            avatarUrl: null,
+            displayName: `${result.username}#${result.discriminator}`,
+          })
+          setReady(true)
         })
-        setReady(true)
-      })
+        .catch((error) => {
+          console.error("Failed to register anonymous identity", error)
+          hasInitialized.current = false
+          setReady(false)
+        })
     }
   }, [
     authLoading,
