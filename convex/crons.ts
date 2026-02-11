@@ -12,7 +12,8 @@ crons.interval(
 crons.interval(
   "cleanup anonymous players",
   { hours: 24 },
-  internal.anonymous.cleanupExpiredAnonymousPlayers
+  internal.anonymous.cleanupExpiredAnonymousPlayers,
+  {}
 )
 
 export default crons

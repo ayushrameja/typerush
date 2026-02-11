@@ -1,8 +1,10 @@
 import { action, internalMutation, mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import { anyApi } from "convex/server"
+import { internal } from "./_generated/api"
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+const CLEANUP_BATCH_SIZE = 200
 
 const adjectives = [
   "Swift", "Neon", "Shadow", "Blazing", "Cyber", "Frost",
@@ -164,18 +166,35 @@ export const updateUsername = mutation({
 })
 
 export const cleanupExpiredAnonymousPlayers = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() - THIRTY_DAYS_MS
+  args: {
+    cursor: v.optional(v.string()),
+    cutoff: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const cutoff = args.cutoff ?? (Date.now() - THIRTY_DAYS_MS)
 
-    const stale = await ctx.db
+    const stalePage = await ctx.db
       .query("anonymousPlayers")
       .withIndex("by_last_seen", (q) => q.lt("lastSeenAt", cutoff))
-      .collect()
+      .paginate({
+        numItems: CLEANUP_BATCH_SIZE,
+        cursor: args.cursor ?? null,
+      })
 
-    for (const player of stale) {
+    for (const player of stalePage.page) {
       if (player.claimedByUserId) continue
       await ctx.db.delete(player._id)
+    }
+
+    if (!stalePage.isDone) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.anonymous.cleanupExpiredAnonymousPlayers,
+        {
+          cursor: stalePage.continueCursor,
+          cutoff,
+        }
+      )
     }
   },
 })
