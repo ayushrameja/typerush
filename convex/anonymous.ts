@@ -1,5 +1,6 @@
-import { mutation, query } from "./_generated/server"
+import { action, internalMutation, mutation, query } from "./_generated/server"
 import { v } from "convex/values"
+import { anyApi } from "convex/server"
 
 const adjectives = [
   "Swift", "Neon", "Shadow", "Blazing", "Cyber", "Frost",
@@ -30,16 +31,7 @@ function generateDiscriminator(): string {
 }
 
 function generateToken(): string {
-  const segments: string[] = []
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-  for (let s = 0; s < 4; s++) {
-    let seg = ""
-    for (let i = 0; i < 8; i++) {
-      seg += chars[Math.floor(Math.random() * chars.length)]
-    }
-    segments.push(seg)
-  }
-  return segments.join("-")
+  return crypto.randomUUID()
 }
 
 function generateAvatarSeed(): string {
@@ -51,7 +43,31 @@ function generateAvatarSeed(): string {
   return seed
 }
 
-export const registerAnonymous = mutation({
+export const registerAnonymousInternal = internalMutation({
+  args: {
+    token: v.string(),
+    username: v.string(),
+    discriminator: v.string(),
+    avatarSeed: v.string(),
+    now: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const playerId = await ctx.db.insert("anonymousPlayers", {
+      secretToken: args.token,
+      username: args.username,
+      discriminator: args.discriminator,
+      avatarSeed: args.avatarSeed,
+      createdAt: args.now,
+      lastSeenAt: args.now,
+      actionCount: 0,
+      actionWindowStart: args.now,
+    })
+
+    return { playerId: playerId as string }
+  },
+})
+
+export const registerAnonymous = action({
   args: {},
   handler: async (ctx) => {
     const now = Date.now()
@@ -60,19 +76,14 @@ export const registerAnonymous = mutation({
     const discriminator = generateDiscriminator()
     const avatarSeed = generateAvatarSeed()
 
-    const playerId = await ctx.db.insert("anonymousPlayers", {
-      secretToken: token,
-      username,
-      discriminator,
-      avatarSeed,
-      createdAt: now,
-      lastSeenAt: now,
-      actionCount: 0,
-      actionWindowStart: now,
-    })
+    const { playerId } = await ctx.runMutation(
+      // Internal mutation keeps DB writes deterministic while action can use secure RNG.
+      anyApi.anonymous.registerAnonymousInternal,
+      { token, username, discriminator, avatarSeed, now }
+    )
 
     return {
-      playerId: playerId as string,
+      playerId,
       token,
       username,
       discriminator,

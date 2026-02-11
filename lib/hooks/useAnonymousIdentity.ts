@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useConvexAuth, useMutation, useQuery } from "convex/react"
+import { useAction, useConvexAuth, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import {
   useIdentityStore,
@@ -13,8 +13,8 @@ import type { PlayerIdentity } from "@/lib/stores/identityStore"
 
 export function useAnonymousIdentity() {
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth()
-  const { identity, setIdentity, setReady, isReady } = useIdentityStore()
-  const registerAnonymous = useMutation(api.anonymous.registerAnonymous)
+  const { setIdentity, setReady, isReady } = useIdentityStore()
+  const registerAnonymous = useAction(api.anonymous.registerAnonymous)
   const hasInitialized = useRef(false)
 
   const stored = loadStoredAnon()
