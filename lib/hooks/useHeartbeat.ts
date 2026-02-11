@@ -39,15 +39,22 @@ export function useHeartbeat({
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isIdleRef = useRef(false)
   const registeredRef = useRef(false)
-  const propsRef = useRef({ enabled, status, lobbyId, keepAliveMutation })
+  const propsRef = useRef({ enabled, status, lobbyId, keepAliveMutation, playerId, playerToken })
   const scheduleRef = useRef<() => void>(() => {})
 
   useEffect(() => {
-    propsRef.current = { enabled, status, lobbyId, keepAliveMutation }
-  }, [enabled, status, lobbyId, keepAliveMutation])
+    propsRef.current = { enabled, status, lobbyId, keepAliveMutation, playerId, playerToken }
+  }, [enabled, status, lobbyId, keepAliveMutation, playerId, playerToken])
 
   const sendKeepAlive = useCallback(() => {
-    const { enabled: en, status: st, lobbyId: lid, keepAliveMutation: ka } = propsRef.current
+    const {
+      enabled: en,
+      status: st,
+      lobbyId: lid,
+      keepAliveMutation: ka,
+      playerId: pid,
+      playerToken: ptoken,
+    } = propsRef.current
     if (!en) return
 
     const interval = getHeartbeatInterval(lastActivityRef.current)
@@ -59,22 +66,33 @@ export function useHeartbeat({
     const lobbyArg = lid ? (lid as Id<"lobbies">) : undefined
 
     ka({
-      playerId,
-      playerToken,
+      playerId: pid,
+      playerToken: ptoken,
       status: st,
       currentLobbyId: lobbyArg,
     }).catch(() => {
       setTimeout(() => {
-        if (!propsRef.current.enabled) return
-        propsRef.current.keepAliveMutation({
-          playerId,
-          playerToken,
-          status: propsRef.current.status,
-          currentLobbyId: lobbyArg,
+        const {
+          enabled: retryEnabled,
+          status: retryStatus,
+          lobbyId: retryLobbyId,
+          keepAliveMutation: retryKeepAliveMutation,
+          playerId: retryPlayerId,
+          playerToken: retryPlayerToken,
+        } = propsRef.current
+        if (!retryEnabled) return
+
+        const retryLobbyArg = retryLobbyId ? (retryLobbyId as Id<"lobbies">) : undefined
+
+        retryKeepAliveMutation({
+          playerId: retryPlayerId,
+          playerToken: retryPlayerToken,
+          status: retryStatus,
+          currentLobbyId: retryLobbyArg,
         }).catch(() => {})
       }, 5000)
     })
-  }, [playerId, playerToken])
+  }, [])
 
   useEffect(() => {
     scheduleRef.current = () => {
