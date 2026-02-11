@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useIdentityStore } from "@/lib/stores/identityStore"
 import { useHeartbeat } from "@/lib/hooks/useHeartbeat"
+import { useLocalHistory } from "@/lib/hooks/useLocalHistory"
 import { IdleOverlay } from "@/components/race/IdleOverlay"
 import { RaceScene } from "@/components/race/RaceScene"
 import { RaceUI } from "@/components/race/RaceUI"
@@ -42,6 +43,9 @@ export default function RaceRoomPage() {
   const setTimeLeftRemote = useMutation(api.lobbies.setTimeLeft)
   const updatePlayerProgressRemote = useMutation(api.lobbies.updatePlayerProgress)
   const finishRace = useMutation(api.lobbies.finishRace)
+  const saveRaceResultMutation = useMutation(api.raceHistory.saveRaceResult)
+  const { addRaceResult } = useLocalHistory()
+  const hasSavedResultRef = useRef(false)
 
   const heartbeatStatus = useMemo(() => {
     if (lobby?.status === "racing") return "in_race" as const
@@ -113,6 +117,53 @@ export default function RaceRoomPage() {
     }
   }, [status, clearRaceIntervals])
 
+  useEffect(() => {
+    if (status !== "finished" || !lobby || !identity) return
+    if (hasSavedResultRef.current) return
+    hasSavedResultRef.current = true
+
+    const isPlayerHost = lobby.hostId === identity.playerId
+    const myProgress = isPlayerHost ? lobby.hostProgress : lobby.guestProgress
+    const opponentProgress = isPlayerHost ? lobby.guestProgress : lobby.hostProgress
+    const opponentId = isPlayerHost ? (lobby.guestId || "") : lobby.hostId
+    const opponentDisconnected = isPlayerHost ? !!lobby.guestDisconnected : !!lobby.hostDisconnected
+
+    const winner = getWinner()
+    const didWin = winner === myProgress?.username
+
+    if (identity.isAuthenticated) {
+      void saveRaceResultMutation({
+        lobbyId: lobby._id,
+        playerId: identity.playerId,
+        playerToken: undefined,
+      })
+    } else if (identity.token) {
+      void saveRaceResultMutation({
+        lobbyId: lobby._id,
+        playerId: identity.playerId,
+        playerToken: identity.token,
+      })
+    }
+
+    const textLength = lobby.textToType.length
+    const charsTyped = Math.round(((myProgress?.progress ?? 0) / 100) * textLength)
+    const myMistakes = myProgress?.mistakes ?? 0
+    const raceAccuracy = charsTyped > 0
+      ? Math.round(Math.max(0, (1 - myMistakes / (charsTyped + myMistakes)) * 100) * 100) / 100
+      : 0
+
+    addRaceResult({
+      opponentUsername: opponentProgress?.username || "Unknown",
+      opponentId,
+      wpm: myProgress?.wpm || 0,
+      accuracy: raceAccuracy,
+      won: didWin,
+      completedAt: Date.now(),
+      lobbyId: roomId,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status])
+
   const startGame = useCallback(async () => {
     if (!isHost || !identity || !lobby) {
       return
@@ -126,6 +177,7 @@ export default function RaceRoomPage() {
     setWpm(0)
     setIsMistake(false)
     startTimeRef.current = null
+    hasSavedResultRef.current = false
 
     const startResult = await startRace({
       lobbyId: lobby._id,
@@ -382,6 +434,7 @@ export default function RaceRoomPage() {
                   username: guestProgress.username || "Player 2",
                   progress: guestProgress.progress,
                   wpm: guestProgress.wpm,
+                  isAnonymous: guestProgress.isAnonymous,
                 }
               : undefined
           }
@@ -389,6 +442,7 @@ export default function RaceRoomPage() {
           onRestart={handleRestart}
           hostDisconnected={lobby.hostDisconnected}
           guestDisconnected={lobby.guestDisconnected}
+          isPlayerAnonymous={!!identity && !identity.isAuthenticated}
         />
       </div>
 

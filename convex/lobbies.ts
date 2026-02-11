@@ -30,7 +30,7 @@ function createRoomCode() {
   return code
 }
 
-function buildPlayerProgress(userId: string, username: string) {
+function buildPlayerProgress(userId: string, username: string, isAnonymous: boolean) {
   return {
     userId,
     username,
@@ -38,6 +38,7 @@ function buildPlayerProgress(userId: string, username: string) {
     wpm: 0,
     mistakes: 0,
     finished: false,
+    isAnonymous,
   }
 }
 
@@ -168,7 +169,7 @@ export const createLobby = mutation({
       createdAt: Date.now(),
       countdown: 3,
       timeLeft: 60,
-      hostProgress: buildPlayerProgress(args.playerId, args.username),
+      hostProgress: buildPlayerProgress(args.playerId, args.username, !!args.playerToken),
     })
 
     return {
@@ -238,7 +239,7 @@ export const joinLobbyByCode = mutation({
       await ctx.db.patch(lobby._id, {
         guestId: args.playerId,
         guestToken: args.playerToken,
-        guestProgress: buildPlayerProgress(args.playerId, args.username),
+        guestProgress: buildPlayerProgress(args.playerId, args.username, !!args.playerToken),
       })
     }
 
@@ -302,7 +303,7 @@ export const findOrCreateMatch = mutation({
       await ctx.db.patch(matchedLobby._id, {
         guestId: args.playerId,
         guestToken: args.playerToken,
-        guestProgress: buildPlayerProgress(args.playerId, args.username),
+        guestProgress: buildPlayerProgress(args.playerId, args.username, !!args.playerToken),
       })
 
       return {
@@ -322,7 +323,7 @@ export const findOrCreateMatch = mutation({
       createdAt: Date.now(),
       countdown: 3,
       timeLeft: 60,
-      hostProgress: buildPlayerProgress(args.playerId, args.username),
+      hostProgress: buildPlayerProgress(args.playerId, args.username, !!args.playerToken),
     })
 
     return {

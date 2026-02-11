@@ -183,6 +183,36 @@ export const cleanupExpiredAnonymousPlayers = internalMutation({
 
     for (const player of stalePage.page) {
       if (player.claimedByUserId) continue
+
+      const playerId = player._id as string
+
+      const raceRecords = await ctx.db
+        .query("raceHistory")
+        .withIndex("by_player_id", (q) => q.eq("playerId", playerId))
+        .collect()
+
+      for (const record of raceRecords) {
+        await ctx.db.delete(record._id)
+      }
+
+      const presence = await ctx.db
+        .query("presence")
+        .withIndex("by_player_id", (q) => q.eq("playerId", playerId))
+        .unique()
+
+      if (presence) {
+        await ctx.db.delete(presence._id)
+      }
+
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_user_id", (q) => q.eq("userId", playerId))
+        .unique()
+
+      if (profile) {
+        await ctx.db.delete(profile._id)
+      }
+
       await ctx.db.delete(player._id)
     }
 

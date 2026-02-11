@@ -16,6 +16,7 @@ const playerProgress = v.object({
   wpm: v.number(),
   mistakes: v.number(),
   finished: v.boolean(),
+  isAnonymous: v.optional(v.boolean()),
 })
 
 export default defineSchema({
@@ -84,6 +85,24 @@ export default defineSchema({
   })
     .index("by_room_code", ["roomCode"])
     .index("by_status_created_at", ["status", "createdAt"]),
+
+  raceHistory: defineTable({
+    playerId: v.string(),
+    playerUsername: v.string(),
+    opponentId: v.string(),
+    opponentUsername: v.string(),
+    lobbyId: v.id("lobbies"),
+    wpm: v.number(),
+    accuracy: v.number(),
+    mistakes: v.number(),
+    progress: v.number(),
+    won: v.boolean(),
+    opponentDisconnected: v.boolean(),
+    completedAt: v.number(),
+  })
+    .index("by_player_id", ["playerId"])
+    .index("by_player_completed", ["playerId", "completedAt"])
+    .index("by_lobby_id", ["lobbyId"]),
 
   presence: defineTable({
     playerId: v.string(),

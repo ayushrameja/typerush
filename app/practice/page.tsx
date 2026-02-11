@@ -14,6 +14,7 @@ import { CountdownScreen } from '@/components/practice/CountdownScreen';
 import { TypingScreen } from '@/components/practice/TypingScreen';
 import { ResultsScreen } from '@/components/practice/ResultsScreen';
 import { useGameStore } from '@/lib/stores/gameStore';
+import { useLocalHistory } from '@/lib/hooks/useLocalHistory';
 import { generateTextForDuration } from '@/lib/utils/words';
 
 type FlowState = 'selection' | 'countdown' | 'typing' | 'results';
@@ -31,6 +32,7 @@ export default function PracticePage() {
 
   const { isAuthenticated } = useConvexAuth();
   const saveSession = useMutation(api.practice.saveSession);
+  const { addPracticeResult } = useLocalHistory();
 
   const {
     wpm,
@@ -84,8 +86,10 @@ export default function PracticePage() {
   const timeUsed = duration === 0 ? timeLeft : duration - timeLeft;
 
   useEffect(() => {
-    if (flowState === 'results' && isAuthenticated && !hasSavedRef.current) {
-      hasSavedRef.current = true;
+    if (flowState !== 'results' || hasSavedRef.current) return;
+    hasSavedRef.current = true;
+
+    if (isAuthenticated) {
       saveSession({
         wpm,
         accuracy,
@@ -97,7 +101,15 @@ export default function PracticePage() {
         difficulty: settings.difficulty,
       });
     }
-  }, [flowState, isAuthenticated, saveSession, wpm, accuracy, duration, timeUsed, totalChars, totalWords, mistakes, settings.difficulty]);
+
+    addPracticeResult({
+      wpm,
+      accuracy,
+      duration,
+      difficulty: settings.difficulty,
+      completedAt: Date.now(),
+    });
+  }, [flowState, isAuthenticated, saveSession, addPracticeResult, wpm, accuracy, duration, timeUsed, totalChars, totalWords, mistakes, settings.difficulty]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsBooting(false), 350);

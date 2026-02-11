@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { formatTime } from "@/lib/utils/calculateStats";
 
 interface RaceUIProps {
@@ -16,11 +17,13 @@ interface RaceUIProps {
     username: string;
     progress: number;
     wpm: number;
+    isAnonymous?: boolean;
   };
   winner?: string;
   onRestart?: () => void;
   hostDisconnected?: boolean;
   guestDisconnected?: boolean;
+  isPlayerAnonymous?: boolean;
 }
 
 export function RaceUI({
@@ -33,6 +36,7 @@ export function RaceUI({
   onRestart,
   hostDisconnected,
   guestDisconnected,
+  isPlayerAnonymous,
 }: RaceUIProps) {
   const opponentDisconnected = hostDisconnected || guestDisconnected;
   return (
@@ -96,6 +100,9 @@ export function RaceUI({
               </span>
               {player2 && (
                 <span className="text-sm font-semibold tracking-wide text-white/75">
+                  {player2.isAnonymous && (
+                    <span className="mr-1 opacity-50" title="Anonymous player">&#128123;</span>
+                  )}
                   {player2.username}
                 </span>
               )}
@@ -157,6 +164,9 @@ export function RaceUI({
               {player2 && (
                 <div className="text-center">
                   <p className="mb-1 text-sm text-white/46">
+                    {player2.isAnonymous && (
+                      <span className="mr-1 opacity-50">&#128123;</span>
+                    )}
                     {player2.username}
                   </p>
                   <p className="text-4xl font-bold text-white/85">
@@ -174,6 +184,20 @@ export function RaceUI({
               >
                 Race Again
               </button>
+            )}
+
+            {isPlayerAnonymous && (
+              <div className="mt-6 border-t border-white/12 pt-4">
+                <p className="text-sm text-white/60">
+                  Great race! Sign in to save this to your permanent record.
+                </p>
+                <Link
+                  href="/login"
+                  className="mt-2 inline-block rounded-lg border border-[#ff4655]/40 bg-[#ff4655]/10 px-6 py-2 text-sm font-semibold text-[#ff9ea7] transition-colors hover:bg-[#ff4655]/20"
+                >
+                  Sign in
+                </Link>
+              </div>
             )}
           </div>
         </motion.div>

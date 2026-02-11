@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { useConvexAuth } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +14,7 @@ import { GridBackground } from '@/components/home/GridBackground';
 import { UsernameEditor } from '@/components/ui/UsernameEditor';
 import { useIdentityStore } from '@/lib/stores/identityStore';
 import { useHeartbeat } from '@/lib/hooks/useHeartbeat';
+import { useLocalHistory, type LocalRaceResult } from '@/lib/hooks/useLocalHistory';
 import { generateTextForDuration } from '@/lib/utils/words';
 
 export default function RaceLobbyPage() {
@@ -38,6 +39,50 @@ export default function RaceLobbyPage() {
     enabled: isReady && !!identity,
     status: "online",
   });
+
+  const { raceHistory: localRaceHistory } = useLocalHistory();
+
+  const serverRecentOpponents = useQuery(
+    api.raceHistory.getRecentOpponents,
+    isAuthenticated && identity ? { playerId: identity.playerId, limit: 5 } : 'skip'
+  );
+
+  const localRecentOpponents = useMemo(() => {
+    if (isAuthenticated) return [];
+    const map = new Map<string, {
+      opponentId: string;
+      opponentUsername: string;
+      totalGames: number;
+      wins: number;
+      losses: number;
+      lastPlayedAt: number;
+    }>();
+
+    for (const race of localRaceHistory) {
+      const existing = map.get(race.opponentId);
+      if (existing) {
+        existing.totalGames += 1;
+        if (race.won) existing.wins += 1;
+        else existing.losses += 1;
+        existing.lastPlayedAt = Math.max(existing.lastPlayedAt, race.completedAt);
+      } else {
+        map.set(race.opponentId, {
+          opponentId: race.opponentId,
+          opponentUsername: race.opponentUsername,
+          totalGames: 1,
+          wins: race.won ? 1 : 0,
+          losses: race.won ? 0 : 1,
+          lastPlayedAt: race.completedAt,
+        });
+      }
+    }
+
+    return Array.from(map.values())
+      .sort((a, b) => b.lastPlayedAt - a.lastPlayedAt)
+      .slice(0, 5);
+  }, [localRaceHistory, isAuthenticated]);
+
+  const recentOpponents = isAuthenticated ? serverRecentOpponents : localRecentOpponents;
 
   const handleCreateRoom = async () => {
     if (!identity) return;
@@ -236,8 +281,59 @@ export default function RaceLobbyPage() {
               {error}
             </motion.p>
           )}
+
+          {recentOpponents && recentOpponents.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-8"
+            >
+              <h2 className="arena-heading mb-4 text-3xl leading-none text-white">Recently Played</h2>
+              <div className="space-y-2">
+                {recentOpponents.map((opponent) => (
+                  <div
+                    key={opponent.opponentId}
+                    className="arena-card flex items-center justify-between gap-4 rounded-2xl px-5 py-4"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/14 bg-white/5 text-sm font-bold text-white/60">
+                        {opponent.opponentUsername.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{opponent.opponentUsername}</p>
+                        <p className="text-xs text-white/45">
+                          {opponent.totalGames} {opponent.totalGames === 1 ? 'game' : 'games'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-[#73e78d]">{opponent.wins}W</span>
+                      <span className="text-xs font-semibold text-[#ff6876]">{opponent.losses}L</span>
+                      <span className="text-xs text-white/35">
+                        {formatRelativeTime(opponent.lastPlayedAt)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+function formatRelativeTime(timestamp: number) {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }

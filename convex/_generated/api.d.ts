@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as lobbies from "../lobbies.js";
 import type * as practice from "../practice.js";
 import type * as presence from "../presence.js";
+import type * as raceHistory from "../raceHistory.js";
 import type * as users from "../users.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   lobbies: typeof lobbies;
   practice: typeof practice;
   presence: typeof presence;
+  raceHistory: typeof raceHistory;
   users: typeof users;
 }>;
 
