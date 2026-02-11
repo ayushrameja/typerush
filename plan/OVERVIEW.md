@@ -224,6 +224,38 @@ Use this as a pre-merge checklist so we do not reintroduce the same bugs with ne
   - `pnpm exec eslint lib/hooks/useAnonymousIdentity.ts`
   - `pnpm exec tsc --noEmit --project convex/tsconfig.json`
 
+### 7) Leave Flow Must Await Cleanup Before Navigation
+
+- In login/lobby exit flows, always `await removePresence(...)` before `signIn("google")`.
+- Handle cleanup rejection explicitly (`try/catch`) so failures are visible instead of silently swallowed.
+- Component callbacks that trigger cleanup + navigation should accept async handlers:
+  - `onConfirm: () => Promise<void> | void`
+
+### 8) Effect Disable Paths Must Update UI Immediately
+
+- If a feature is gated by `enabled`, do not hide critical UI only in effect cleanup.
+- When `enabled` flips false, clear timers/intervals and update visibility state immediately in the `if (!enabled)` branch.
+- Keep returned cleanup focused on teardown for unmount/effect re-run.
+
+### 9) Cron Cleanup Must Be Bounded Per Invocation
+
+- Avoid `collect()` + unbounded delete loops in mutations that can grow over time.
+- For `cleanupExpiredAnonymousPlayers`, page with a fixed batch size (`paginate` / `take`) and process one page per invocation.
+- If more rows remain, schedule continuation (`ctx.scheduler.runAfter`) with cursor + fixed cutoff so work is deterministic and limit-safe.
+
+### 10) Presence Removal Auth Must Use Shared Validator
+
+- `removePresence` must use `validatePlayer(ctx, playerId, playerToken)` (same contract as other presence mutations).
+- If validation fails, return early before canceling jobs, touching lobbies, or deleting rows.
+- This keeps anonymous token verification for guests while still allowing authenticated/tokenless flows.
+
+### 11) Heartbeat Retry Must Read Fresh Runtime State
+
+- Retry callbacks must not reuse captured `lobbyId`/derived args from outer scope.
+- In delayed retry (`setTimeout`), read latest values from `propsRef.current` at execution time:
+  - `enabled`, `status`, `lobbyId`, `playerId`, `playerToken`, `keepAliveMutation`.
+- Recompute `currentLobbyId` inside the retry before calling `keepAliveMutation`.
+
 ---
 
 ## Files Changed
