@@ -218,11 +218,11 @@ export const removePresence = mutation({
     playerToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const valid = await validatePlayer(ctx, args.playerId, args.playerToken)
+    if (!valid) return
+
     const record = await findPresenceByPlayer(ctx, args.playerId)
     if (!record) return
-    if (!args.playerToken || !record.playerToken || args.playerToken !== record.playerToken) {
-      return
-    }
 
     if (record.cleanupJobId) {
       await ctx.scheduler.cancel(record.cleanupJobId)
