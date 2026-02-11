@@ -46,9 +46,8 @@ export function IdleOverlay({ playerId, playerToken, lobbyId, enabled }: IdleOve
         clearInterval(checkIntervalRef.current)
         checkIntervalRef.current = null
       }
-      return () => {
-        setIsVisible(false)
-      }
+      queueMicrotask(() => setIsVisible(false))
+      return
     }
 
     lastActivityRef.current = Date.now()
