@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server"
+import { mutation, query, internalMutation } from "./_generated/server"
 import type { MutationCtx } from "./_generated/server"
 import { v } from "convex/values"
 
@@ -278,20 +278,36 @@ export const findOrCreateMatch = mutation({
       .withIndex("by_status_created_at", (q) => q.eq("status", "waiting"))
       .collect()
 
-    const availableLobby = waiting.find(
+    const candidates = waiting.filter(
       (lobby) => !lobby.guestId && lobby.hostId !== args.playerId
     )
 
-    if (availableLobby) {
-      await ctx.db.patch(availableLobby._id, {
+    let matchedLobby = null
+    for (const candidate of candidates) {
+      const hostPresence = await ctx.db
+        .query("presence")
+        .withIndex("by_player_id", (q) => q.eq("playerId", candidate.hostId))
+        .unique()
+
+      const isHostAlive =
+        hostPresence && Date.now() - hostPresence.lastHeartbeatAt < 45_000
+
+      if (isHostAlive) {
+        matchedLobby = candidate
+        break
+      }
+    }
+
+    if (matchedLobby) {
+      await ctx.db.patch(matchedLobby._id, {
         guestId: args.playerId,
         guestToken: args.playerToken,
         guestProgress: buildPlayerProgress(args.playerId, args.username),
       })
 
       return {
-        lobbyId: availableLobby._id,
-        roomCode: availableLobby.roomCode,
+        lobbyId: matchedLobby._id,
+        roomCode: matchedLobby.roomCode,
         role: "guest" as const,
       }
     }
@@ -522,5 +538,53 @@ export const setLobbyStatus = mutation({
     })
 
     return { ok: true as const }
+  },
+})
+
+export const cleanupStaleLobbies = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now()
+    const TEN_MINUTES = 10 * 60 * 1000
+    const FIVE_MINUTES = 5 * 60 * 1000
+    const ONE_HOUR = 60 * 60 * 1000
+
+    const waitingLobbies = await ctx.db
+      .query("lobbies")
+      .withIndex("by_status_created_at", (q) => q.eq("status", "waiting"))
+      .collect()
+
+    for (const lobby of waitingLobbies) {
+      if (now - lobby.createdAt < TEN_MINUTES) continue
+
+      const hostPresence = await ctx.db
+        .query("presence")
+        .withIndex("by_player_id", (q) => q.eq("playerId", lobby.hostId))
+        .unique()
+
+      if (!hostPresence) {
+        await ctx.db.delete(lobby._id)
+      }
+    }
+
+    const countdownLobbies = await ctx.db
+      .query("lobbies")
+      .withIndex("by_status_created_at", (q) => q.eq("status", "countdown"))
+      .collect()
+
+    for (const lobby of countdownLobbies) {
+      if (now - lobby.createdAt < FIVE_MINUTES) continue
+      await ctx.db.patch(lobby._id, { status: "finished" })
+    }
+
+    const finishedLobbies = await ctx.db
+      .query("lobbies")
+      .withIndex("by_status_created_at", (q) => q.eq("status", "finished"))
+      .collect()
+
+    for (const lobby of finishedLobbies) {
+      if (now - lobby.createdAt < ONE_HOUR) continue
+      await ctx.db.delete(lobby._id)
+    }
   },
 })

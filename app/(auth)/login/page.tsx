@@ -1,18 +1,24 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useAuthActions } from "@convex-dev/auth/react"
-import { useConvexAuth } from "convex/react"
+import { useConvexAuth, useMutation } from "convex/react"
+import { api } from "@/convex/_generated/api"
 import { Card } from "@/components/ui/Card"
 import { GridBackground } from "@/components/home/GridBackground"
+import { LobbyLeaveWarning } from "@/components/auth/LobbyLeaveWarning"
+import { useIdentityStore } from "@/lib/stores/identityStore"
 
 export default function LoginPage() {
   const router = useRouter()
   const { isAuthenticated } = useConvexAuth()
   const { signIn } = useAuthActions()
+  const { identity, currentLobbyId } = useIdentityStore()
+  const [showLeaveWarning, setShowLeaveWarning] = useState(false)
+  const removePresence = useMutation(api.presence.removePresence)
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -20,9 +26,38 @@ export default function LoginPage() {
     }
   }, [router, isAuthenticated])
 
+  const handleSignIn = useCallback(() => {
+    if (currentLobbyId) {
+      setShowLeaveWarning(true)
+      return
+    }
+    void signIn("google")
+  }, [currentLobbyId, signIn])
+
+  const handleConfirmLeave = useCallback(async () => {
+    setShowLeaveWarning(false)
+    if (identity) {
+      try {
+        await removePresence({
+          playerId: identity.playerId,
+          playerToken: identity.token ?? undefined,
+        })
+      } catch (error) {
+        console.error("Failed to remove presence before sign-in", error)
+      }
+    }
+    await signIn("google")
+  }, [identity, removePresence, signIn])
+
   return (
     <div className="arena-shell flex min-h-screen items-center justify-center px-4">
       <GridBackground />
+
+      <LobbyLeaveWarning
+        isOpen={showLeaveWarning}
+        onConfirm={handleConfirmLeave}
+        onCancel={() => setShowLeaveWarning(false)}
+      />
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <Card glow className="w-full max-w-md p-8">
@@ -35,7 +70,7 @@ export default function LoginPage() {
           <div className="space-y-4">
             <button
               type="button"
-              onClick={() => void signIn("google")}
+              onClick={handleSignIn}
               className="arena-button w-full py-4 font-semibold tracking-wide"
             >
               Continue with Google
