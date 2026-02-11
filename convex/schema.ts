@@ -87,6 +87,7 @@ export default defineSchema({
 
   presence: defineTable({
     playerId: v.string(),
+    playerToken: v.optional(v.string()),
     username: v.string(),
     status: v.union(
       v.literal("online"),

@@ -110,6 +110,7 @@ export const registerPresence = mutation({
       )
 
       await ctx.db.patch(existing._id, {
+        ...(args.playerToken !== undefined ? { playerToken: args.playerToken } : {}),
         username: args.username,
         status: "online",
         lastHeartbeatAt: now,
@@ -127,6 +128,7 @@ export const registerPresence = mutation({
 
     await ctx.db.insert("presence", {
       playerId: args.playerId,
+      playerToken: args.playerToken,
       username: args.username,
       status: "online",
       lastHeartbeatAt: now,
@@ -160,6 +162,7 @@ export const keepAlive = mutation({
 
       await ctx.db.insert("presence", {
         playerId: args.playerId,
+        playerToken: args.playerToken,
         username: "",
         status: args.status ?? "online",
         currentLobbyId: args.currentLobbyId,
@@ -182,6 +185,7 @@ export const keepAlive = mutation({
     )
 
     await ctx.db.patch(record._id, {
+      ...(args.playerToken !== undefined ? { playerToken: args.playerToken } : {}),
       lastHeartbeatAt: Date.now(),
       cleanupJobId,
       ...(args.status ? { status: args.status } : {}),
@@ -216,6 +220,9 @@ export const removePresence = mutation({
   handler: async (ctx, args) => {
     const record = await findPresenceByPlayer(ctx, args.playerId)
     if (!record) return
+    if (!args.playerToken || !record.playerToken || args.playerToken !== record.playerToken) {
+      return
+    }
 
     if (record.cleanupJobId) {
       await ctx.scheduler.cancel(record.cleanupJobId)
