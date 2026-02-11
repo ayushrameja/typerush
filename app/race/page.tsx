@@ -5,17 +5,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useMutation } from 'convex/react';
+import { useConvexAuth } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { GridBackground } from '@/components/home/GridBackground';
-import { useUserStore } from '@/lib/stores/userStore';
+import { UsernameEditor } from '@/components/ui/UsernameEditor';
+import { useIdentityStore } from '@/lib/stores/identityStore';
 import { generateTextForDuration } from '@/lib/utils/words';
 
 export default function RaceLobbyPage() {
   const router = useRouter();
-  const { user, profile } = useUserStore();
+  const { identity, isReady } = useIdentityStore();
+  const { isAuthenticated } = useConvexAuth();
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -25,14 +28,10 @@ export default function RaceLobbyPage() {
   const createLobby = useMutation(api.lobbies.createLobby);
   const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode);
   const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch);
-
-  const getUsername = () => profile?.username || 'Player';
+  const updateAnonUsername = useMutation(api.anonymous.updateUsername);
 
   const handleCreateRoom = async () => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!identity) return;
 
     setIsCreating(true);
     setError('');
@@ -40,25 +39,23 @@ export default function RaceLobbyPage() {
     try {
       const textToType = generateTextForDuration(60);
       const result = await createLobby({
-        hostId: user.id,
-        username: getUsername(),
+        playerId: identity.playerId,
+        playerToken: identity.token ?? undefined,
+        username: identity.displayName,
         textToType,
       });
 
       router.push(`/race/${result.lobbyId}?host=true`);
     } catch (createError) {
-      console.error(createError);
-      setError('Failed to create room. Please try again.');
+      const msg = createError instanceof Error ? createError.message : 'Failed to create room.';
+      setError(msg);
     } finally {
       setIsCreating(false);
     }
   };
 
   const handleJoinRoom = async () => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!identity) return;
 
     if (!joinCode.trim()) {
       setError('Please enter a room code');
@@ -70,8 +67,9 @@ export default function RaceLobbyPage() {
 
     try {
       const result = await joinLobbyByCode({
-        userId: user.id,
-        username: getUsername(),
+        playerId: identity.playerId,
+        playerToken: identity.token ?? undefined,
+        username: identity.displayName,
         roomCode: joinCode,
       });
 
@@ -82,18 +80,15 @@ export default function RaceLobbyPage() {
 
       router.push(`/race/${result.lobbyId}`);
     } catch (joinError) {
-      console.error(joinError);
-      setError('Failed to join room');
+      const msg = joinError instanceof Error ? joinError.message : 'Failed to join room';
+      setError(msg);
     } finally {
       setIsJoining(false);
     }
   };
 
   const handleFindMatch = async () => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!identity) return;
 
     setIsFindingMatch(true);
     setError('');
@@ -101,8 +96,9 @@ export default function RaceLobbyPage() {
     try {
       const textToType = generateTextForDuration(60);
       const result = await findOrCreateMatch({
-        userId: user.id,
-        username: getUsername(),
+        playerId: identity.playerId,
+        playerToken: identity.token ?? undefined,
+        username: identity.displayName,
         textToType,
       });
 
@@ -112,12 +108,20 @@ export default function RaceLobbyPage() {
         router.push(`/race/${result.lobbyId}`);
       }
     } catch (matchError) {
-      console.error(matchError);
-      setError('Failed to find match. Please try again.');
+      const msg = matchError instanceof Error ? matchError.message : 'Failed to find match.';
+      setError(msg);
     } finally {
       setIsFindingMatch(false);
     }
   };
+
+  const handleUsernameChange = async (newName: string) => {
+    if (!identity?.token) return;
+    const result = await updateAnonUsername({ token: identity.token, newUsername: newName });
+    if (!result.ok) throw new Error(result.error);
+  };
+
+  const waiting = !isReady || !identity;
 
   return (
     <div className="arena-shell min-h-screen px-4 py-12">
@@ -143,19 +147,26 @@ export default function RaceLobbyPage() {
           <p className="mt-2 text-white/58">Queue random, create a room, or join by code.</p>
         </motion.div>
 
-        {!user && (
+        {!isAuthenticated && identity && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mb-8 rounded-2xl border border-[#ff4655]/45 bg-[#ff4655]/12 p-4"
+            className="mb-8 rounded-2xl border border-white/14 bg-white/5 p-4 flex items-center justify-between gap-4 flex-wrap"
           >
-            <p className="text-sm text-[#ffadb4]">
-              You need to{' '}
-              <Link href="/login" className="underline hover:no-underline">
-                sign in
-              </Link>{' '}
-              to play multiplayer races.
-            </p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-white/60">Playing as</span>
+              <UsernameEditor
+                currentName={identity.username}
+                discriminator={identity.discriminator}
+                onSave={handleUsernameChange}
+              />
+            </div>
+            <Link
+              href="/login"
+              className="text-sm font-semibold text-[#ff9ea8] transition-colors hover:text-white"
+            >
+              Sign in to save progress →
+            </Link>
           </motion.div>
         )}
 
@@ -164,7 +175,7 @@ export default function RaceLobbyPage() {
             <Card className="p-6">
               <h2 className="arena-heading text-4xl leading-none text-white">Quick Match</h2>
               <p className="mb-4 mt-2 text-white/58">Find a random opponent and start immediately.</p>
-              <Button onClick={handleFindMatch} isLoading={isFindingMatch} disabled={!user} className="w-full" size="lg">
+              <Button onClick={handleFindMatch} isLoading={isFindingMatch} disabled={waiting} className="w-full" size="lg">
                 Find Opponent
               </Button>
             </Card>
@@ -177,7 +188,7 @@ export default function RaceLobbyPage() {
               <Button
                 onClick={handleCreateRoom}
                 isLoading={isCreating}
-                disabled={!user}
+                disabled={waiting}
                 variant="secondary"
                 className="w-full"
                 size="lg"
@@ -202,7 +213,7 @@ export default function RaceLobbyPage() {
                 <Button
                   onClick={handleJoinRoom}
                   isLoading={isJoining}
-                  disabled={!user || !joinCode.trim()}
+                  disabled={waiting || !joinCode.trim()}
                   variant="secondary"
                 >
                   Join

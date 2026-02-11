@@ -56,9 +56,18 @@ export default function LoginPage() {
             >
               Continue to Practice
             </Link>
+
+            <Link
+              href="/race"
+              className="block w-full py-3 text-center text-sm text-white/50 transition-colors hover:text-white/75"
+            >
+              Play multiplayer as guest →
+            </Link>
           </div>
 
-          <p className="mt-6 text-center text-white/48">Multiplayer requires a Google login.</p>
+          <p className="mt-6 text-center text-xs text-white/38">
+            Sign in to save your race history, track stats, and sync across devices.
+          </p>
         </Card>
       </motion.div>
     </div>

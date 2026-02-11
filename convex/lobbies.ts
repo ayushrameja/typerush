@@ -18,6 +18,10 @@ const playerProgressArgs = {
   finished: v.boolean(),
 }
 
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000
+const MAX_LOBBY_CREATES = 10
+const MAX_LOBBY_JOINS = 30
+
 function createRoomCode() {
   let code = ""
   for (let i = 0; i < 6; i += 1) {
@@ -35,6 +39,63 @@ function buildPlayerProgress(userId: string, username: string) {
     mistakes: 0,
     finished: false,
   }
+}
+
+async function resolveAndValidatePlayer(
+  ctx: MutationCtx,
+  playerId: string,
+  playerToken?: string
+): Promise<{ valid: boolean; username: string }> {
+  if (playerToken) {
+    const anon = await ctx.db
+      .query("anonymousPlayers")
+      .withIndex("by_secret_token", (q) => q.eq("secretToken", playerToken))
+      .unique()
+
+    if (!anon || (anon._id as string) !== playerId || anon.claimedByUserId) {
+      return { valid: false, username: "" }
+    }
+
+    await ctx.db.patch(anon._id, { lastSeenAt: Date.now() })
+    return { valid: true, username: `${anon.username}#${anon.discriminator}` }
+  }
+
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_user_id", (q) => q.eq("userId", playerId))
+    .unique()
+
+  return { valid: true, username: profile?.username || "Player" }
+}
+
+async function checkRateLimit(
+  ctx: MutationCtx,
+  token: string,
+  actionType: "create" | "join"
+): Promise<boolean> {
+  const anon = await ctx.db
+    .query("anonymousPlayers")
+    .withIndex("by_secret_token", (q) => q.eq("secretToken", token))
+    .unique()
+
+  if (!anon) return false
+
+  const now = Date.now()
+  const windowExpired = now - anon.actionWindowStart > RATE_LIMIT_WINDOW
+
+  if (windowExpired) {
+    await ctx.db.patch(anon._id, {
+      actionCount: 1,
+      actionWindowStart: now,
+    })
+    return true
+  }
+
+  const limit = actionType === "create" ? MAX_LOBBY_CREATES : MAX_LOBBY_JOINS
+  if (anon.actionCount >= limit) return false
+
+  await ctx.db.patch(anon._id, { actionCount: anon.actionCount + 1 })
+  return true
 }
 
 async function upsertProfile(ctx: MutationCtx, userId: string, username: string) {
@@ -75,23 +136,39 @@ async function getUniqueRoomCode(ctx: MutationCtx) {
 
 export const createLobby = mutation({
   args: {
-    hostId: v.string(),
+    playerId: v.string(),
+    playerToken: v.optional(v.string()),
     username: v.string(),
     textToType: v.string(),
   },
   handler: async (ctx, args) => {
-    await upsertProfile(ctx, args.hostId, args.username)
+    const identity = await resolveAndValidatePlayer(ctx, args.playerId, args.playerToken)
+    if (!identity.valid) {
+      throw new Error("Invalid identity")
+    }
+
+    if (args.playerToken) {
+      const allowed = await checkRateLimit(ctx, args.playerToken, "create")
+      if (!allowed) {
+        throw new Error("Rate limit exceeded. Please wait before creating more lobbies.")
+      }
+    }
+
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const roomCode = await getUniqueRoomCode(ctx)
     const lobbyId = await ctx.db.insert("lobbies", {
-      hostId: args.hostId,
+      hostId: args.playerId,
+      hostToken: args.playerToken,
       roomCode,
       status: "waiting",
       textToType: args.textToType,
       createdAt: Date.now(),
       countdown: 3,
       timeLeft: 60,
-      hostProgress: buildPlayerProgress(args.hostId, args.username),
+      hostProgress: buildPlayerProgress(args.playerId, args.username),
     })
 
     return {
@@ -104,12 +181,27 @@ export const createLobby = mutation({
 
 export const joinLobbyByCode = mutation({
   args: {
-    userId: v.string(),
+    playerId: v.string(),
+    playerToken: v.optional(v.string()),
     username: v.string(),
     roomCode: v.string(),
   },
   handler: async (ctx, args) => {
-    await upsertProfile(ctx, args.userId, args.username)
+    const identity = await resolveAndValidatePlayer(ctx, args.playerId, args.playerToken)
+    if (!identity.valid) {
+      return { ok: false as const, error: "Invalid identity" }
+    }
+
+    if (args.playerToken) {
+      const allowed = await checkRateLimit(ctx, args.playerToken, "join")
+      if (!allowed) {
+        return { ok: false as const, error: "Rate limit exceeded. Please wait before joining more lobbies." }
+      }
+    }
+
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const normalizedCode = args.roomCode.trim().toUpperCase()
     const candidates = await ctx.db
@@ -128,14 +220,14 @@ export const joinLobbyByCode = mutation({
       }
     }
 
-    if (lobby.hostId === args.userId) {
+    if (lobby.hostId === args.playerId) {
       return {
         ok: false as const,
         error: "You cannot join your own room",
       }
     }
 
-    if (lobby.guestId && lobby.guestId !== args.userId) {
+    if (lobby.guestId && lobby.guestId !== args.playerId) {
       return {
         ok: false as const,
         error: "Room is already full",
@@ -144,8 +236,9 @@ export const joinLobbyByCode = mutation({
 
     if (!lobby.guestId) {
       await ctx.db.patch(lobby._id, {
-        guestId: args.userId,
-        guestProgress: buildPlayerProgress(args.userId, args.username),
+        guestId: args.playerId,
+        guestToken: args.playerToken,
+        guestProgress: buildPlayerProgress(args.playerId, args.username),
       })
     }
 
@@ -158,12 +251,27 @@ export const joinLobbyByCode = mutation({
 
 export const findOrCreateMatch = mutation({
   args: {
-    userId: v.string(),
+    playerId: v.string(),
+    playerToken: v.optional(v.string()),
     username: v.string(),
     textToType: v.string(),
   },
   handler: async (ctx, args) => {
-    await upsertProfile(ctx, args.userId, args.username)
+    const identity = await resolveAndValidatePlayer(ctx, args.playerId, args.playerToken)
+    if (!identity.valid) {
+      throw new Error("Invalid identity")
+    }
+
+    if (args.playerToken) {
+      const allowed = await checkRateLimit(ctx, args.playerToken, "join")
+      if (!allowed) {
+        throw new Error("Rate limit exceeded. Please wait before finding more matches.")
+      }
+    }
+
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const waiting = await ctx.db
       .query("lobbies")
@@ -171,13 +279,14 @@ export const findOrCreateMatch = mutation({
       .collect()
 
     const availableLobby = waiting.find(
-      (lobby) => !lobby.guestId && lobby.hostId !== args.userId
+      (lobby) => !lobby.guestId && lobby.hostId !== args.playerId
     )
 
     if (availableLobby) {
       await ctx.db.patch(availableLobby._id, {
-        guestId: args.userId,
-        guestProgress: buildPlayerProgress(args.userId, args.username),
+        guestId: args.playerId,
+        guestToken: args.playerToken,
+        guestProgress: buildPlayerProgress(args.playerId, args.username),
       })
 
       return {
@@ -189,14 +298,15 @@ export const findOrCreateMatch = mutation({
 
     const roomCode = await getUniqueRoomCode(ctx)
     const lobbyId = await ctx.db.insert("lobbies", {
-      hostId: args.userId,
+      hostId: args.playerId,
+      hostToken: args.playerToken,
       roomCode,
       status: "waiting",
       textToType: args.textToType,
       createdAt: Date.now(),
       countdown: 3,
       timeLeft: 60,
-      hostProgress: buildPlayerProgress(args.userId, args.username),
+      hostProgress: buildPlayerProgress(args.playerId, args.username),
     })
 
     return {
@@ -220,8 +330,12 @@ export const startRace = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     actorId: v.string(),
+    actorToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.actorId, args.actorToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby || lobby.hostId !== args.actorId) {
       return { ok: false as const }
@@ -261,9 +375,13 @@ export const setCountdown = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     actorId: v.string(),
+    actorToken: v.optional(v.string()),
     count: v.number(),
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.actorId, args.actorToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby || lobby.hostId !== args.actorId) {
       return { ok: false as const }
@@ -283,9 +401,13 @@ export const setTimeLeft = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     actorId: v.string(),
+    actorToken: v.optional(v.string()),
     timeLeft: v.number(),
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.actorId, args.actorToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby || lobby.hostId !== args.actorId) {
       return { ok: false as const }
@@ -306,9 +428,13 @@ export const updatePlayerProgress = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     playerId: v.string(),
+    playerToken: v.optional(v.string()),
     ...playerProgressArgs,
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.playerId, args.playerToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby) {
       return { ok: false as const }
@@ -351,8 +477,12 @@ export const finishRace = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     actorId: v.string(),
+    actorToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.actorId, args.actorToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby) {
       return { ok: false as const }
@@ -375,9 +505,13 @@ export const setLobbyStatus = mutation({
   args: {
     lobbyId: v.id("lobbies"),
     actorId: v.string(),
+    actorToken: v.optional(v.string()),
     status: raceStatus,
   },
   handler: async (ctx, args) => {
+    const identity = await resolveAndValidatePlayer(ctx, args.actorId, args.actorToken)
+    if (!identity.valid) return { ok: false as const }
+
     const lobby = await ctx.db.get(args.lobbyId)
     if (!lobby || lobby.hostId !== args.actorId) {
       return { ok: false as const }

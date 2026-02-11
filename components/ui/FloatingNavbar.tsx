@@ -8,6 +8,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useGameStore } from "@/lib/stores/gameStore";
+import { useIdentityStore } from "@/lib/stores/identityStore";
 
 type MainNavItem = {
   href: string;
@@ -187,7 +188,7 @@ function RightSidePanel({
         </Link>
 
         <Link
-          href={isAuthenticated ? "/race" : "/login"}
+          href="/race"
           aria-label="Friends"
           title="Friends"
           className="core-rail-action"
@@ -236,26 +237,45 @@ function RightSidePanel({
             </div>
           )
           : (
-            <Link
-              href="/login"
-              className="core-rail-action-btn"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="core-rail-icon"
+            <div className="core-rail-user-section">
+              <AnonIdentityDisplay />
+              <Link
+                href="/login"
+                className="core-rail-action-btn"
               >
-                <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
-                <polyline points="10 17 15 12 10 7" />
-                <line x1="15" y1="12" x2="3" y2="12" />
-              </svg>
-              <span className="core-rail-label">Sign in</span>
-            </Link>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="core-rail-icon"
+                >
+                  <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4" />
+                  <polyline points="10 17 15 12 10 7" />
+                  <line x1="15" y1="12" x2="3" y2="12" />
+                </svg>
+                <span className="core-rail-label">Sign in</span>
+              </Link>
+            </div>
           )}
+      </div>
+    </div>
+  );
+}
+
+function AnonIdentityDisplay() {
+  const { identity } = useIdentityStore();
+  if (!identity || identity.isAuthenticated) return null;
+
+  return (
+    <div className="core-rail-user-info">
+      <div className="text-xs font-semibold text-white truncate">
+        {identity.displayName}
+      </div>
+      <div className="text-[10px] text-white/50 truncate">
+        Anonymous
       </div>
     </div>
   );

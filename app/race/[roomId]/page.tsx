@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
-import { useUserStore } from "@/lib/stores/userStore"
+import { useIdentityStore } from "@/lib/stores/identityStore"
 import { RaceScene } from "@/components/race/RaceScene"
 import { RaceUI } from "@/components/race/RaceUI"
 import { calculateProgress } from "@/lib/utils/calculateStats"
@@ -26,7 +26,7 @@ export default function RaceRoomPage() {
   const roomId = params.roomId as string
   const lobbyId = roomId as Id<"lobbies">
 
-  const { user, isLoading } = useUserStore()
+  const { identity, isReady } = useIdentityStore()
 
   const lobby = useQuery(api.lobbies.getLobby, roomId ? { lobbyId } : "skip")
 
@@ -61,12 +61,6 @@ export default function RaceRoomPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/login")
-    }
-  }, [isLoading, user, router])
-
-  useEffect(() => {
     return () => {
       clearRaceIntervals()
     }
@@ -76,7 +70,7 @@ export default function RaceRoomPage() {
   const countdown = lobby?.countdown ?? 3
   const timeLeft = lobby?.timeLeft ?? 60
   const textToType = lobby?.textToType ?? ""
-  const isHost = !!user && !!lobby && lobby.hostId === user.id
+  const isHost = !!identity && !!lobby && lobby.hostId === identity.playerId
 
   const hostProgress = lobby?.hostProgress ?? {
     ...defaultPlayerProgress,
@@ -99,7 +93,7 @@ export default function RaceRoomPage() {
   }, [status, clearRaceIntervals])
 
   const startGame = useCallback(async () => {
-    if (!isHost || !user || !lobby) {
+    if (!isHost || !identity || !lobby) {
       return
     }
 
@@ -114,7 +108,8 @@ export default function RaceRoomPage() {
 
     const startResult = await startRace({
       lobbyId: lobby._id,
-      actorId: user.id,
+      actorId: identity.playerId,
+      actorToken: identity.token ?? undefined,
     })
 
     if (!startResult.ok) {
@@ -127,7 +122,8 @@ export default function RaceRoomPage() {
 
       void setCountdownRemote({
         lobbyId: lobby._id,
-        actorId: user.id,
+        actorId: identity.playerId,
+        actorToken: identity.token ?? undefined,
         count,
       })
 
@@ -143,7 +139,8 @@ export default function RaceRoomPage() {
 
           void setTimeLeftRemote({
             lobbyId: lobby._id,
-            actorId: user.id,
+            actorId: identity.playerId,
+            actorToken: identity.token ?? undefined,
             timeLeft: time,
           })
 
@@ -154,11 +151,11 @@ export default function RaceRoomPage() {
         }, 1000)
       }
     }, 1000)
-  }, [clearRaceIntervals, isHost, lobby, setCountdownRemote, setTimeLeftRemote, startRace, user])
+  }, [clearRaceIntervals, isHost, lobby, setCountdownRemote, setTimeLeftRemote, startRace, identity])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!user || !lobby || status !== "racing") {
+      if (!identity || !lobby || status !== "racing") {
         return
       }
 
@@ -198,7 +195,8 @@ export default function RaceRoomPage() {
 
       void updatePlayerProgressRemote({
         lobbyId: lobby._id,
-        playerId: user.id,
+        playerId: identity.playerId,
+        playerToken: identity.token ?? undefined,
         progress,
         wpm: newWpm,
         mistakes,
@@ -209,7 +207,8 @@ export default function RaceRoomPage() {
         clearRaceIntervals()
         void finishRace({
           lobbyId: lobby._id,
-          actorId: user.id,
+          actorId: identity.playerId,
+          actorToken: identity.token ?? undefined,
         })
       }
     },
@@ -224,7 +223,7 @@ export default function RaceRoomPage() {
       streak,
       textToType,
       updatePlayerProgressRemote,
-      user,
+      identity,
     ]
   )
 
@@ -243,7 +242,7 @@ export default function RaceRoomPage() {
     router.push("/race")
   }
 
-  if (lobby === undefined) {
+  if (!isReady || lobby === undefined) {
     return (
       <div className="h-screen w-screen flex items-center justify-center bg-[#090b0f]">
         <motion.div

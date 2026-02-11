@@ -6,6 +6,7 @@ import { useConvexAuth } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { GridBackground } from "./GridBackground";
 import { useUserStore } from "@/lib/stores/userStore";
+import { useIdentityStore } from "@/lib/stores/identityStore";
 import { Toast } from "@/components/ui/Toast";
 
 const fallbackName = "Immature Beast";
@@ -13,11 +14,12 @@ const heroBackground = "/assets/images/user-profile.png";
 
 export function HeroLobby() {
   const user = useUserStore((state) => state.user);
+  const { identity } = useIdentityStore();
   const { isAuthenticated } = useConvexAuth();
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
 
-  const displayName = user?.name?.trim() || fallbackName;
+  const displayName = identity?.displayName || user?.name?.trim() || fallbackName;
   const userAvatar = useMemo(() => {
     const candidate = user?.avatarUrl?.trim();
     return candidate || null;
@@ -32,7 +34,7 @@ export function HeroLobby() {
     return () => clearTimeout(timer);
   }, [showToast]);
 
-  const addFriendsHref = isAuthenticated ? "/race" : "/login";
+  const addFriendsHref = "/race";
 
   function handleSlotClick(slotLabel: string) {
     setToastMessage(`${slotLabel} slot coming soon.`);
