@@ -2,6 +2,8 @@ import { action, internalMutation, mutation, query } from "./_generated/server"
 import { v } from "convex/values"
 import { anyApi } from "convex/server"
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
 const adjectives = [
   "Swift", "Neon", "Shadow", "Blazing", "Cyber", "Frost",
   "Storm", "Hyper", "Turbo", "Pixel", "Phantom", "Quantum",
@@ -158,5 +160,22 @@ export const updateUsername = mutation({
     })
 
     return { ok: true as const }
+  },
+})
+
+export const cleanupExpiredAnonymousPlayers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - THIRTY_DAYS_MS
+
+    const stale = await ctx.db
+      .query("anonymousPlayers")
+      .withIndex("by_last_seen", (q) => q.lt("lastSeenAt", cutoff))
+      .collect()
+
+    for (const player of stale) {
+      if (player.claimedByUserId) continue
+      await ctx.db.delete(player._id)
+    }
   },
 })

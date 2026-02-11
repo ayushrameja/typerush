@@ -18,12 +18,14 @@ interface IdentityState {
   identity: PlayerIdentity | null
   isReady: boolean
   showMergePrompt: boolean
+  currentLobbyId: string | null
 
   setIdentity: (identity: PlayerIdentity) => void
   clear: () => void
   setReady: (ready: boolean) => void
   updateUsername: (username: string) => void
   setShowMergePrompt: (show: boolean) => void
+  setCurrentLobbyId: (lobbyId: string | null) => void
 }
 
 export const ANON_STORAGE_KEY = "typerush_anon"
@@ -62,6 +64,7 @@ export const useIdentityStore = create<IdentityState>((set) => ({
   identity: null,
   isReady: false,
   showMergePrompt: false,
+  currentLobbyId: null,
 
   setIdentity: (identity) => set({ identity }),
   clear: () => set({ identity: null, isReady: false }),
@@ -81,4 +84,5 @@ export const useIdentityStore = create<IdentityState>((set) => ({
       }
     }),
   setShowMergePrompt: (showMergePrompt) => set({ showMergePrompt }),
+  setCurrentLobbyId: (currentLobbyId) => set({ currentLobbyId }),
 }))

@@ -1,12 +1,14 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { useIdentityStore } from "@/lib/stores/identityStore"
+import { useHeartbeat } from "@/lib/hooks/useHeartbeat"
+import { IdleOverlay } from "@/components/race/IdleOverlay"
 import { RaceScene } from "@/components/race/RaceScene"
 import { RaceUI } from "@/components/race/RaceUI"
 import { calculateProgress } from "@/lib/utils/calculateStats"
@@ -26,7 +28,12 @@ export default function RaceRoomPage() {
   const roomId = params.roomId as string
   const lobbyId = roomId as Id<"lobbies">
 
-  const { identity, isReady } = useIdentityStore()
+  const { identity, isReady, setCurrentLobbyId } = useIdentityStore()
+
+  useEffect(() => {
+    setCurrentLobbyId(roomId)
+    return () => setCurrentLobbyId(null)
+  }, [roomId, setCurrentLobbyId])
 
   const lobby = useQuery(api.lobbies.getLobby, roomId ? { lobbyId } : "skip")
 
@@ -35,6 +42,20 @@ export default function RaceRoomPage() {
   const setTimeLeftRemote = useMutation(api.lobbies.setTimeLeft)
   const updatePlayerProgressRemote = useMutation(api.lobbies.updatePlayerProgress)
   const finishRace = useMutation(api.lobbies.finishRace)
+
+  const heartbeatStatus = useMemo(() => {
+    if (lobby?.status === "racing") return "in_race" as const
+    return "in_lobby" as const
+  }, [lobby?.status])
+
+  useHeartbeat({
+    playerId: identity?.playerId ?? "",
+    playerToken: identity?.token ?? undefined,
+    username: identity?.displayName ?? "",
+    enabled: isReady && !!identity,
+    lobbyId: roomId,
+    status: heartbeatStatus,
+  })
 
   const [currentIndex, setCurrentIndex] = useState(0)
   const [mistakes, setMistakes] = useState(0)
@@ -271,8 +292,34 @@ export default function RaceRoomPage() {
     )
   }
 
+  if (lobby.hostDisconnected && !isHost) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-[#090b0f] px-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-[#ff4655]/30 bg-[#ff4655]/10">
+            <svg className="h-10 w-10 text-[#ff4655]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          </div>
+          <p className="arena-heading text-5xl leading-none text-white mb-2">Host disconnected</p>
+          <p className="text-white/58 mb-6">Your opponent left the race.</p>
+          <button onClick={() => router.push("/race")} className="arena-button px-8 py-3 font-semibold">
+            Back to Lobby
+          </button>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#090b0f]">
+      <IdleOverlay
+        playerId={identity?.playerId ?? ""}
+        playerToken={identity?.token ?? undefined}
+        lobbyId={roomId}
+        enabled={isReady && !!identity && (status === "waiting" || status === "countdown")}
+      />
+
       <div className="absolute top-4 left-4 z-50">
         <div className="rounded-xl border border-white/14 bg-[#0f131b]/82 px-4 py-2 backdrop-blur-sm">
           <p className="text-xs uppercase tracking-[0.09em] text-white/46">Room Code</p>
@@ -340,6 +387,8 @@ export default function RaceRoomPage() {
           }
           winner={status === "finished" ? getWinner() : undefined}
           onRestart={handleRestart}
+          hostDisconnected={lobby.hostDisconnected}
+          guestDisconnected={lobby.guestDisconnected}
         />
       </div>
 
@@ -386,9 +435,14 @@ export default function RaceRoomPage() {
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               className="w-16 h-16 border-4 border-[#ff4655] border-t-transparent rounded-full mx-auto mb-6"
             />
-            <p className="arena-heading text-5xl leading-none text-white mb-2">Waiting for opponent...</p>
+            <p className="arena-heading text-5xl leading-none text-white mb-2">
+              {lobby.guestDisconnected ? "Opponent left" : "Waiting for opponent..."}
+            </p>
             <p className="text-white/58">
-              Share the room code: <span className="font-bold text-[#ff9ea8]">{lobby.roomCode}</span>
+              {lobby.guestDisconnected
+                ? "Waiting for a new player..."
+                : <>Share the room code: <span className="font-bold text-[#ff9ea8]">{lobby.roomCode}</span></>
+              }
             </p>
           </div>
         </div>

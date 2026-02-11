@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/Card';
 import { GridBackground } from '@/components/home/GridBackground';
 import { UsernameEditor } from '@/components/ui/UsernameEditor';
 import { useIdentityStore } from '@/lib/stores/identityStore';
+import { useHeartbeat } from '@/lib/hooks/useHeartbeat';
 import { generateTextForDuration } from '@/lib/utils/words';
 
 export default function RaceLobbyPage() {
@@ -29,6 +30,14 @@ export default function RaceLobbyPage() {
   const joinLobbyByCode = useMutation(api.lobbies.joinLobbyByCode);
   const findOrCreateMatch = useMutation(api.lobbies.findOrCreateMatch);
   const updateAnonUsername = useMutation(api.anonymous.updateUsername);
+
+  useHeartbeat({
+    playerId: identity?.playerId ?? "",
+    playerToken: identity?.token ?? undefined,
+    username: identity?.displayName ?? "",
+    enabled: isReady && !!identity,
+    status: "online",
+  });
 
   const handleCreateRoom = async () => {
     if (!identity) return;

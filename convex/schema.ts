@@ -79,7 +79,27 @@ export default defineSchema({
     timeLeft: v.number(),
     hostProgress: playerProgress,
     guestProgress: v.optional(playerProgress),
+    hostDisconnected: v.optional(v.boolean()),
+    guestDisconnected: v.optional(v.boolean()),
   })
     .index("by_room_code", ["roomCode"])
     .index("by_status_created_at", ["status", "createdAt"]),
+
+  presence: defineTable({
+    playerId: v.string(),
+    username: v.string(),
+    status: v.union(
+      v.literal("online"),
+      v.literal("idle"),
+      v.literal("in_lobby"),
+      v.literal("in_race")
+    ),
+    currentLobbyId: v.optional(v.id("lobbies")),
+    lastHeartbeatAt: v.number(),
+    connectedAt: v.number(),
+    cleanupJobId: v.optional(v.id("_scheduled_functions")),
+  })
+    .index("by_player_id", ["playerId"])
+    .index("by_status", ["status"])
+    .index("by_last_heartbeat", ["lastHeartbeatAt"]),
 })

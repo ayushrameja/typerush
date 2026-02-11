@@ -151,17 +151,18 @@ without punishing anonymous players.
 
 **Branch:** `ayush/anonymous-multiplayer`
 
-### Phase 2 — Presence System + Lobby Lifecycle (NOT STARTED)
+### Phase 2 — Presence System + Lobby Lifecycle ✅ COMPLETE
 > **Goal:** Lobbies are reliable — dead lobbies are cleaned up, Quick Match never matches a ghost.
 
-- `presence` table + heartbeat mutations
-- Client-side `HeartbeatManager` hook (adaptive intervals, idle detection, visibility API)
-- Deadman's switch via Convex scheduled functions
-- Lobby cleanup cron (stale lobbies with no active host)
-- `findOrCreateMatch` filters by host presence
-- Lobby abandonment handling (host leaves → lobby closes, guest notified)
-- Sign-in while in lobby: warning modal + clean lobby exit
-- UI: idle overlay, "Host left" notification, lobby status indicators
+- ✅ `presence` table + heartbeat mutations (`convex/presence.ts`)
+- ✅ Client-side `useHeartbeat` hook (adaptive intervals, idle detection, visibility API)
+- ✅ Deadman's switch via Convex scheduled functions (30s expiry)
+- ✅ Lobby cleanup cron + anonymous cleanup cron (`convex/crons.ts`)
+- ✅ `findOrCreateMatch` filters by host presence (45s alive threshold)
+- ✅ Lobby abandonment handling (host leaves → lobby closes, guest notified; guest leaves → lobby reopens)
+- ✅ Sign-in while in lobby: `LobbyLeaveWarning` modal + clean lobby exit
+- ✅ UI: `IdleOverlay` (5min idle warning), "Host disconnected" screen, "Opponent Left" in results
+- ✅ Disconnect flags on lobbies (`hostDisconnected`, `guestDisconnected`)
 
 ### Phase 3 — Race History, Merge Flow, Tiered Features (NOT STARTED)
 > **Goal:** Race results persist, anonymous data merges on login, tiered feature model is live.
@@ -176,6 +177,52 @@ without punishing anonymous players.
 - Conversion prompts ("Great race! Sign in to save this to your record.")
 - 30-day anonymous cleanup cron
 - Update `stats` table on race finish for authenticated users
+
+---
+
+## Phase 2 Guardrails (Learnings From Phase 1 Reviews)
+
+Use this as a pre-merge checklist so we do not reintroduce the same bugs with new features.
+
+### 1) Convex Determinism + Token Security
+
+- Never generate auth/session-like tokens inside a Convex mutation.
+- Do non-deterministic/secure generation in an `action` (for example `crypto.randomUUID()`).
+- Keep DB writes deterministic via mutation/internalMutation calls from that action.
+- Avoid `Math.random()` for security-sensitive values. It is fast, weak, and eventually embarrassing.
+
+### 2) Identity Contract Must Stay Explicit
+
+- In lobby flows, `playerToken` present means anonymous identity path; `playerToken` absent means authenticated profile path.
+- Only upsert `profiles` for authenticated identities.
+- Anonymous player IDs must not create rows in `profiles`.
+- Re-validate this invariant whenever mutation args or identity plumbing changes.
+
+### 3) Anonymous Hook State Must Be Reactive (Not Stale)
+
+- Do not treat storage reads as stable by default (`useMemo(loadStoredAnon)` can go stale).
+- Keep anonymous token in React state (`anonToken`) and drive queries from that state.
+- When calling `saveStoredAnon`, `clearStoredAnon`, or successful `registerAnonymous`, update `anonToken` state in the same flow.
+
+### 4) Initialization Guard Rules
+
+- `hasInitialized` must not block invalid-token handling.
+- Early-return guards should still allow the `serverPlayer === null` branch to run, so expired tokens can be cleared and re-registration can happen.
+- Reset `hasInitialized.current` when auth status changes (`authLoading` / `isAuthenticated`) to allow re-init after login/logout transitions.
+
+### 5) Async Race Safety in `useAnonymousIdentity`
+
+- Always handle `registerAnonymous` rejection (`.catch` or `try/catch`).
+- On failure: log, reset `hasInitialized.current = false`, avoid persisting partial identity state.
+- Guard in-flight `registerAnonymous` resolution with latest auth state ref.
+- If auth becomes authenticated while request is in flight, ignore stale anon results (do not call `saveStoredAnon`, `setAnonToken`, or overwrite identity).
+
+### 6) Lint/Type Safety Notes
+
+- React hook lint rules may reject synchronous `setState` inside effects; use a deferred update or restructure effect control flow.
+- Run lint and targeted typecheck after each identity/auth hook change:
+  - `pnpm exec eslint lib/hooks/useAnonymousIdentity.ts`
+  - `pnpm exec tsc --noEmit --project convex/tsconfig.json`
 
 ---
 
@@ -211,16 +258,23 @@ without punishing anonymous players.
 | `components/home/HeroLobby.tsx` | ✅ Done | Uses identity display name, "Add friends" → `/race` always |
 | `app/(auth)/login/page.tsx` | ✅ Done | Updated copy, added "Play multiplayer as guest" link |
 
-### Phase 2 — Not Started
+### Phase 2 — Completed
 
 | File | Status | Changes |
 |------|--------|---------|
-| `convex/schema.ts` | Pending | Add `presence` table, add disconnect flags to `lobbies` |
-| `convex/presence.ts` | Pending | **NEW** — heartbeat, keepAlive, expirePresence mutations |
-| `convex/crons.ts` | Pending | **NEW** — scheduled cleanup jobs |
-| `lib/hooks/useHeartbeat.ts` | Pending | **NEW** — adaptive heartbeat with idle detection |
-| `components/race/IdleOverlay.tsx` | Pending | **NEW** — idle warning overlay |
-| `components/auth/LobbyLeaveWarning.tsx` | Pending | **NEW** — sign-in warning modal |
+| `convex/schema.ts` | ✅ Done | Added `presence` table, added `hostDisconnected`/`guestDisconnected` to `lobbies` |
+| `convex/presence.ts` | ✅ Done | **NEW** — registerPresence, keepAlive, expirePresence, removePresence, getPresence, getPresenceForLobby |
+| `convex/crons.ts` | ✅ Done | **NEW** — stale lobby cleanup (5min), anonymous player cleanup (24h) |
+| `convex/lobbies.ts` | ✅ Done | Presence-aware `findOrCreateMatch`, `cleanupStaleLobbies` internal mutation |
+| `convex/anonymous.ts` | ✅ Done | Added `cleanupExpiredAnonymousPlayers` internal mutation (30-day TTL) |
+| `lib/hooks/useHeartbeat.ts` | ✅ Done | **NEW** — adaptive heartbeat (10s/25s/stop), idle detection, visibility API |
+| `lib/stores/identityStore.ts` | ✅ Done | Added `currentLobbyId` tracking for sign-in interception |
+| `app/race/page.tsx` | ✅ Done | Mounted heartbeat hook with `status: "online"` |
+| `app/race/[roomId]/page.tsx` | ✅ Done | Mounted heartbeat hook, idle overlay, host-disconnect screen, guest-disconnect handling |
+| `components/race/RaceUI.tsx` | ✅ Done | Disconnect state in finished overlay ("Opponent Left" messaging) |
+| `components/race/IdleOverlay.tsx` | ✅ Done | **NEW** — idle warning overlay (5min threshold) |
+| `components/auth/LobbyLeaveWarning.tsx` | ✅ Done | **NEW** — sign-in warning modal for lobby exit |
+| `app/(auth)/login/page.tsx` | ✅ Done | Integrated `LobbyLeaveWarning` + presence cleanup on sign-in |
 
 ### Phase 3 — Not Started
 
