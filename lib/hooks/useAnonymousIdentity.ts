@@ -16,11 +16,13 @@ export function useAnonymousIdentity() {
   const { setIdentity, setReady, isReady } = useIdentityStore()
   const registerAnonymous = useAction(api.anonymous.registerAnonymous)
   const hasInitialized = useRef(false)
+  const latestAuthRef = useRef({ isAuthenticated, authLoading })
   const [anonToken, setAnonToken] = useState<string | null>(
     () => loadStoredAnon()?.token ?? null
   )
 
   useEffect(() => {
+    latestAuthRef.current = { isAuthenticated, authLoading }
     hasInitialized.current = false
   }, [authLoading, isAuthenticated])
 
@@ -34,7 +36,7 @@ export function useAnonymousIdentity() {
   useEffect(() => {
     if (authLoading) return
     if (isAuthenticated) return
-    if (hasInitialized.current && isReady) return
+    if (hasInitialized.current && isReady && serverPlayer != null) return
 
     if (anonToken && serverPlayer === undefined) return
 
@@ -65,6 +67,13 @@ export function useAnonymousIdentity() {
       hasInitialized.current = true
       void registerAnonymous({})
         .then((result) => {
+          if (
+            latestAuthRef.current.authLoading ||
+            latestAuthRef.current.isAuthenticated
+          ) {
+            return
+          }
+
           const newAnon = {
             token: result.token,
             playerId: result.playerId,
@@ -90,6 +99,13 @@ export function useAnonymousIdentity() {
           setReady(true)
         })
         .catch((error) => {
+          if (
+            latestAuthRef.current.authLoading ||
+            latestAuthRef.current.isAuthenticated
+          ) {
+            return
+          }
+
           console.error("Failed to register anonymous identity", error)
           hasInitialized.current = false
           setReady(false)
