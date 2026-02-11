@@ -1,4 +1,7 @@
-# Phase 1 — Anonymous Identity + Remove Login Gate
+# Phase 1 — Anonymous Identity + Remove Login Gate ✅ COMPLETE
+
+> **Status:** All 15 steps implemented. TypeScript compiles with 0 errors.
+> **Branch:** `ayush/anonymous-multiplayer`
 
 ## Goal
 
@@ -728,21 +731,21 @@ export interface Stats {
 ## Implementation Order (within Phase 1)
 
 ```
-Step 1:  convex/schema.ts          — add anonymousPlayers table, update lobbies
-Step 2:  lib/utils/nameGenerator.ts — fun name generator
-Step 3:  convex/anonymous.ts       — register, validate, updateUsername mutations
-Step 4:  lib/types/user.ts         — extend types
-Step 5:  lib/stores/identityStore.ts — new zustand store
-Step 6:  lib/hooks/useAnonymousIdentity.ts — registration/hydration hook
-Step 7:  components/providers/IdentityProvider.tsx — identity provider
-Step 8:  components/auth/AuthProvider.tsx — update for dual identity
-Step 9:  convex/lobbies.ts         — update mutations with identity validation + rate limiting
-Step 10: app/race/page.tsx         — remove login gate, use identity, add banner + editor
-Step 11: app/race/[roomId]/page.tsx — remove redirect, use identity
-Step 12: components/ui/UsernameEditor.tsx — inline name editor
-Step 13: components/ui/FloatingNavbar.tsx — update links + anon user display
-Step 14: components/home/HeroLobby.tsx — update display name + link
-Step 15: app/(auth)/login/page.tsx — update copy + add "continue as guest"
+Step 1:  ✅ convex/schema.ts          — add anonymousPlayers table, update lobbies
+Step 2:  ✅ lib/utils/nameGenerator.ts — fun name generator
+Step 3:  ✅ convex/anonymous.ts       — register, validate, updateUsername mutations
+Step 4:  ✅ lib/types/user.ts         — extend types
+Step 5:  ✅ lib/stores/identityStore.ts — new zustand store
+Step 6:  ✅ lib/hooks/useAnonymousIdentity.ts — registration/hydration hook
+Step 7:  ✅ components/providers/IdentityProvider.tsx — identity provider
+Step 8:  ✅ components/auth/AuthProvider.tsx — update for dual identity
+Step 9:  ✅ convex/lobbies.ts         — update mutations with identity validation + rate limiting
+Step 10: ✅ app/race/page.tsx         — remove login gate, use identity, add banner + editor
+Step 11: ✅ app/race/[roomId]/page.tsx — remove redirect, use identity
+Step 12: ✅ components/ui/UsernameEditor.tsx — inline name editor
+Step 13: ✅ components/ui/FloatingNavbar.tsx — update links + anon user display
+Step 14: ✅ components/home/HeroLobby.tsx — update display name + link
+Step 15: ✅ app/(auth)/login/page.tsx — update copy + add "continue as guest"
 ```
 
 ---

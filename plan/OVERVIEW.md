@@ -137,19 +137,21 @@ without punishing anonymous players.
 
 ## Phased Implementation
 
-### Phase 1 — Anonymous Identity + Remove Login Gate
+### Phase 1 — Anonymous Identity + Remove Login Gate ✅ COMPLETE
 > **Goal:** Any visitor can create/join/quick-match a multiplayer race without signing in.
 
-- Server-issued anonymous identity (Convex `anonymousPlayers` table)
-- `localStorage` token persistence (`typerush_anon`)
-- Fun name generator with 4-digit discriminator
-- Remove all login gates from `/race` and `/race/[roomId]`
-- Update `AuthProvider` + `userStore` + `identityStore` to support dual identity
-- Update lobby mutations to accept anonymous player tokens with server validation
-- Token-based rate limiting on lobby mutations
-- UI: remove sign-in warning banner, enable all buttons for anonymous, add username editor
+- ✅ Server-issued anonymous identity (Convex `anonymousPlayers` table)
+- ✅ `localStorage` token persistence (`typerush_anon`)
+- ✅ Fun name generator with 4-digit discriminator
+- ✅ Remove all login gates from `/race` and `/race/[roomId]`
+- ✅ Update `AuthProvider` + `userStore` + `identityStore` to support dual identity
+- ✅ Update lobby mutations to accept anonymous player tokens with server validation
+- ✅ Token-based rate limiting on lobby mutations
+- ✅ UI: remove sign-in warning banner, enable all buttons for anonymous, add username editor
 
-### Phase 2 — Presence System + Lobby Lifecycle
+**Branch:** `ayush/anonymous-multiplayer`
+
+### Phase 2 — Presence System + Lobby Lifecycle (NOT STARTED)
 > **Goal:** Lobbies are reliable — dead lobbies are cleaned up, Quick Match never matches a ghost.
 
 - `presence` table + heartbeat mutations
@@ -161,7 +163,7 @@ without punishing anonymous players.
 - Sign-in while in lobby: warning modal + clean lobby exit
 - UI: idle overlay, "Host left" notification, lobby status indicators
 
-### Phase 3 — Race History, Merge Flow, Tiered Features
+### Phase 3 — Race History, Merge Flow, Tiered Features (NOT STARTED)
 > **Goal:** Race results persist, anonymous data merges on login, tiered feature model is live.
 
 - `raceHistory` Convex table + write on race finish
@@ -177,45 +179,60 @@ without punishing anonymous players.
 
 ---
 
-## Files That Will Be Modified
+## Files Changed
 
-### Convex Backend
-| File | Changes |
-|------|---------|
-| `convex/schema.ts` | Add `anonymousPlayers`, `presence`, `raceHistory` tables; update `lobbies` |
-| `convex/lobbies.ts` | Accept anonymous tokens, validate identity, rate limiting, presence check in matchmaking |
-| `convex/anonymous.ts` | **NEW** — register, validate, refresh, cleanup mutations |
-| `convex/presence.ts` | **NEW** — heartbeat, keepAlive, expirePresence mutations |
-| `convex/raceHistory.ts` | **NEW** — saveResult, getHistory, getRecentOpponents queries |
-| `convex/crons.ts` | **NEW** — scheduled cleanup jobs |
-| `convex/users.ts` | Add merge mutation for anonymous → auth data transfer |
+### Phase 1 — Completed
 
-### Client State & Hooks
-| File | Changes |
-|------|---------|
-| `lib/stores/userStore.ts` | Support anonymous user shape, dual identity |
-| `lib/stores/identityStore.ts` | **NEW** — anonymous token management, localStorage sync |
-| `lib/hooks/useHeartbeat.ts` | **NEW** — adaptive heartbeat with idle detection |
-| `lib/hooks/useAnonymousIdentity.ts` | **NEW** — register/load anonymous identity on mount |
-| `lib/hooks/useLocalHistory.ts` | **NEW** — localStorage race/practice history (20, FIFO) |
-| `lib/types/user.ts` | Extend `AppUser` for anonymous fields |
-| `lib/utils/nameGenerator.ts` | **NEW** — fun name + discriminator generator |
+#### Convex Backend
+| File | Status | Changes |
+|------|--------|---------|
+| `convex/schema.ts` | ✅ Done | Added `anonymousPlayers` table, added `hostToken`/`guestToken` to `lobbies` |
+| `convex/lobbies.ts` | ✅ Done | All mutations accept `playerToken`, identity validation, rate limiting |
+| `convex/anonymous.ts` | ✅ Done | **NEW** — `registerAnonymous`, `getAnonymousPlayer`, `refreshLastSeen`, `updateUsername` |
 
-### UI Components
-| File | Changes |
-|------|---------|
-| `components/auth/AuthProvider.tsx` | Handle anonymous fallback on logout/token expiry, trigger merge prompt |
-| `components/auth/MergePrompt.tsx` | **NEW** — modal for merge vs. fresh start on login |
-| `components/auth/LobbyLeaveWarning.tsx` | **NEW** — modal warning when signing in from a lobby |
-| `app/race/page.tsx` | Remove login gate, use anonymous identity, add username editor |
-| `app/race/[roomId]/page.tsx` | Remove login redirect, use anonymous identity, handle lobby abandonment |
-| `app/(auth)/login/page.tsx` | Update copy, remove "multiplayer requires login" messaging |
-| `components/ui/FloatingNavbar.tsx` | "Friends" link → `/race` always (no login redirect), show anonymous user info |
-| `components/home/HeroLobby.tsx` | Show anonymous name, "Add friends" → `/race` always |
-| `components/race/RaceUI.tsx` | Add ghost indicator for anonymous opponents, conversion prompt on finish |
-| `components/ui/UsernameEditor.tsx` | **NEW** — inline click-to-edit username component |
-| `components/ui/DataExpiryBanner.tsx` | **NEW** — "Your data expires in X days" banner for anonymous |
-| `app/history/page.tsx` | Add multiplayer tab, show localStorage results for anonymous |
+#### Client State & Hooks
+| File | Status | Changes |
+|------|--------|---------|
+| `lib/types/user.ts` | ✅ Done | Extended `AppUser` with `displayName`, `avatarSeed`, `token`; added `AnonymousIdentity` |
+| `lib/stores/identityStore.ts` | ✅ Done | **NEW** — zustand store for unified identity, localStorage helpers |
+| `lib/hooks/useAnonymousIdentity.ts` | ✅ Done | **NEW** — auto-registers/hydrates anonymous identity on mount |
+| `lib/utils/nameGenerator.ts` | ✅ Done | **NEW** — fun name + discriminator generator |
+
+#### UI Components
+| File | Status | Changes |
+|------|--------|---------|
+| `components/auth/AuthProvider.tsx` | ✅ Done | Updated to set new `AppUser` fields for dual identity |
+| `components/providers/IdentityProvider.tsx` | ✅ Done | **NEW** — bridges auth and anonymous identity systems |
+| `app/layout.tsx` | ✅ Done | Added `IdentityProvider` to component tree |
+| `app/race/page.tsx` | ✅ Done | Removed login gate, uses identity store, anonymous banner + username editor |
+| `app/race/[roomId]/page.tsx` | ✅ Done | Removed login redirect, uses identity store for all mutations |
+| `components/ui/UsernameEditor.tsx` | ✅ Done | **NEW** — inline click-to-edit username component |
+| `components/ui/FloatingNavbar.tsx` | ✅ Done | "Friends" → `/race` always, shows anonymous identity in side panel |
+| `components/home/HeroLobby.tsx` | ✅ Done | Uses identity display name, "Add friends" → `/race` always |
+| `app/(auth)/login/page.tsx` | ✅ Done | Updated copy, added "Play multiplayer as guest" link |
+
+### Phase 2 — Not Started
+
+| File | Status | Changes |
+|------|--------|---------|
+| `convex/schema.ts` | Pending | Add `presence` table, add disconnect flags to `lobbies` |
+| `convex/presence.ts` | Pending | **NEW** — heartbeat, keepAlive, expirePresence mutations |
+| `convex/crons.ts` | Pending | **NEW** — scheduled cleanup jobs |
+| `lib/hooks/useHeartbeat.ts` | Pending | **NEW** — adaptive heartbeat with idle detection |
+| `components/race/IdleOverlay.tsx` | Pending | **NEW** — idle warning overlay |
+| `components/auth/LobbyLeaveWarning.tsx` | Pending | **NEW** — sign-in warning modal |
+
+### Phase 3 — Not Started
+
+| File | Status | Changes |
+|------|--------|---------|
+| `convex/raceHistory.ts` | Pending | **NEW** — saveResult, getHistory, getRecentOpponents |
+| `lib/hooks/useLocalHistory.ts` | Pending | **NEW** — localStorage race/practice history (20, FIFO) |
+| `components/auth/MergePrompt.tsx` | Pending | **NEW** — modal for merge vs. fresh start on login |
+| `convex/users.ts` | Pending | Add merge mutation for anonymous → auth data transfer |
+| `components/ui/DataExpiryBanner.tsx` | Pending | **NEW** — data expiry banner for anonymous |
+| `components/race/RaceUI.tsx` | Pending | Ghost indicator, conversion prompt |
+| `app/history/page.tsx` | Pending | Multiplayer tab, dual data source |
 
 ---
 
