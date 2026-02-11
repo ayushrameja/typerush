@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useAction, useConvexAuth, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import {
@@ -16,32 +16,36 @@ export function useAnonymousIdentity() {
   const { setIdentity, setReady, isReady } = useIdentityStore()
   const registerAnonymous = useAction(api.anonymous.registerAnonymous)
   const hasInitialized = useRef(false)
+  const [anonToken, setAnonToken] = useState<string | null>(
+    () => loadStoredAnon()?.token ?? null
+  )
 
-  const storedToken = useMemo(() => loadStoredAnon()?.token ?? null, [])
+  useEffect(() => {
+    hasInitialized.current = false
+  }, [authLoading, isAuthenticated])
+
   const serverPlayer = useQuery(
     api.anonymous.getAnonymousPlayer,
-    !authLoading && !isAuthenticated && storedToken
-      ? { token: storedToken }
+    !authLoading && !isAuthenticated && anonToken
+      ? { token: anonToken }
       : "skip"
   )
 
   useEffect(() => {
-    const stored = loadStoredAnon()
-
     if (authLoading) return
     if (isAuthenticated) return
     if (hasInitialized.current && isReady) return
 
-    if (storedToken && serverPlayer === undefined) return
+    if (anonToken && serverPlayer === undefined) return
 
-    if (storedToken && serverPlayer) {
+    if (anonToken && serverPlayer) {
       const anonIdentity: PlayerIdentity = {
         playerId: serverPlayer.playerId,
         username: serverPlayer.username,
         discriminator: serverPlayer.discriminator,
         avatarSeed: serverPlayer.avatarSeed,
         isAuthenticated: false,
-        token: stored?.token ?? storedToken,
+        token: anonToken,
         email: null,
         avatarUrl: null,
         displayName: `${serverPlayer.username}#${serverPlayer.discriminator}`,
@@ -52,8 +56,9 @@ export function useAnonymousIdentity() {
       return
     }
 
-    if (storedToken && serverPlayer === null) {
+    if (anonToken && serverPlayer === null) {
       clearStoredAnon()
+      queueMicrotask(() => setAnonToken(null))
     }
 
     if (!hasInitialized.current) {
@@ -69,6 +74,7 @@ export function useAnonymousIdentity() {
             createdAt: Date.now(),
           }
           saveStoredAnon(newAnon)
+          setAnonToken(result.token)
 
           setIdentity({
             playerId: result.playerId,
@@ -92,7 +98,7 @@ export function useAnonymousIdentity() {
   }, [
     authLoading,
     isAuthenticated,
-    storedToken,
+    anonToken,
     serverPlayer,
     setIdentity,
     setReady,
