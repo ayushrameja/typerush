@@ -154,7 +154,9 @@ export const createLobby = mutation({
       }
     }
 
-    await upsertProfile(ctx, args.playerId, args.username)
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const roomCode = await getUniqueRoomCode(ctx)
     const lobbyId = await ctx.db.insert("lobbies", {
@@ -197,7 +199,9 @@ export const joinLobbyByCode = mutation({
       }
     }
 
-    await upsertProfile(ctx, args.playerId, args.username)
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const normalizedCode = args.roomCode.trim().toUpperCase()
     const candidates = await ctx.db
@@ -265,7 +269,9 @@ export const findOrCreateMatch = mutation({
       }
     }
 
-    await upsertProfile(ctx, args.playerId, args.username)
+    if (!args.playerToken) {
+      await upsertProfile(ctx, args.playerId, args.username)
+    }
 
     const waiting = await ctx.db
       .query("lobbies")

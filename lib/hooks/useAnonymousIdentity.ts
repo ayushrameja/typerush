@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useAction, useConvexAuth, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import {
@@ -17,29 +17,31 @@ export function useAnonymousIdentity() {
   const registerAnonymous = useAction(api.anonymous.registerAnonymous)
   const hasInitialized = useRef(false)
 
-  const stored = loadStoredAnon()
+  const storedToken = useMemo(() => loadStoredAnon()?.token ?? null, [])
   const serverPlayer = useQuery(
     api.anonymous.getAnonymousPlayer,
-    !authLoading && !isAuthenticated && stored?.token
-      ? { token: stored.token }
+    !authLoading && !isAuthenticated && storedToken
+      ? { token: storedToken }
       : "skip"
   )
 
   useEffect(() => {
+    const stored = loadStoredAnon()
+
     if (authLoading) return
     if (isAuthenticated) return
     if (hasInitialized.current && isReady) return
 
-    if (stored && serverPlayer === undefined) return
+    if (storedToken && serverPlayer === undefined) return
 
-    if (stored && serverPlayer) {
+    if (storedToken && serverPlayer) {
       const anonIdentity: PlayerIdentity = {
         playerId: serverPlayer.playerId,
         username: serverPlayer.username,
         discriminator: serverPlayer.discriminator,
         avatarSeed: serverPlayer.avatarSeed,
         isAuthenticated: false,
-        token: stored.token,
+        token: stored?.token ?? storedToken,
         email: null,
         avatarUrl: null,
         displayName: `${serverPlayer.username}#${serverPlayer.discriminator}`,
@@ -50,7 +52,7 @@ export function useAnonymousIdentity() {
       return
     }
 
-    if (stored && serverPlayer === null) {
+    if (storedToken && serverPlayer === null) {
       clearStoredAnon()
     }
 
@@ -84,7 +86,7 @@ export function useAnonymousIdentity() {
   }, [
     authLoading,
     isAuthenticated,
-    stored,
+    storedToken,
     serverPlayer,
     setIdentity,
     setReady,
