@@ -26,8 +26,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: currentUser._id,
         isAnonymous: false,
         name: username,
+        displayName: username,
         email: currentUser.email ?? null,
         avatarUrl: currentUser.image ?? null,
+        avatarSeed: null,
+        token: null,
       })
 
       setProfile({

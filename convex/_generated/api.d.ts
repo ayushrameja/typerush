@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as anonymous from "../anonymous.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as lobbies from "../lobbies.js";
@@ -21,6 +22,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  anonymous: typeof anonymous;
   auth: typeof auth;
   http: typeof http;
   lobbies: typeof lobbies;

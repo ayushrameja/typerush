@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { ConvexClientProvider } from '@/components/providers/ConvexClientProvider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { IdentityProvider } from '@/components/providers/IdentityProvider';
 import { FloatingNavbar } from '@/components/ui/FloatingNavbar';
 import './globals.css';
 
@@ -26,8 +27,10 @@ export default function RootLayout({
       <body className="antialiased" suppressHydrationWarning>
         <ConvexClientProvider>
           <AuthProvider>
-            <FloatingNavbar />
-            {children}
+            <IdentityProvider>
+              <FloatingNavbar />
+              {children}
+            </IdentityProvider>
           </AuthProvider>
         </ConvexClientProvider>
       </body>

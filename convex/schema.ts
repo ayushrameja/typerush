@@ -21,6 +21,20 @@ const playerProgress = v.object({
 export default defineSchema({
   ...authTables,
 
+  anonymousPlayers: defineTable({
+    secretToken: v.string(),
+    username: v.string(),
+    discriminator: v.string(),
+    avatarSeed: v.string(),
+    createdAt: v.number(),
+    lastSeenAt: v.number(),
+    actionCount: v.number(),
+    actionWindowStart: v.number(),
+    claimedByUserId: v.optional(v.id("users")),
+  })
+    .index("by_secret_token", ["secretToken"])
+    .index("by_last_seen", ["lastSeenAt"]),
+
   profiles: defineTable({
     userId: v.string(),
     username: v.string(),
@@ -54,9 +68,11 @@ export default defineSchema({
 
   lobbies: defineTable({
     hostId: v.string(),
+    hostToken: v.optional(v.string()),
     roomCode: v.string(),
     status: raceStatus,
     guestId: v.optional(v.string()),
+    guestToken: v.optional(v.string()),
     textToType: v.string(),
     createdAt: v.number(),
     countdown: v.number(),

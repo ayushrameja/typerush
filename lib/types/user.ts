@@ -2,8 +2,20 @@ export interface AppUser {
   id: string
   isAnonymous: boolean
   name: string
+  displayName: string
   email: string | null
   avatarUrl: string | null
+  avatarSeed: string | null
+  token: string | null
+}
+
+export interface AnonymousIdentity {
+  token: string
+  playerId: string
+  username: string
+  discriminator: string
+  avatarSeed: string
+  createdAt: number
 }
 
 export interface Profile {
