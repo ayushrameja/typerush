@@ -3,6 +3,7 @@ import { ConvexClientProvider } from '@/components/providers/ConvexClientProvide
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { IdentityProvider } from '@/components/providers/IdentityProvider';
 import { FloatingNavbar } from '@/components/ui/FloatingNavbar';
+import { ArchiveBanner } from '@/components/ui/ArchiveBanner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
           <AuthProvider>
             <IdentityProvider>
               <FloatingNavbar />
+              <ArchiveBanner />
               {children}
             </IdentityProvider>
           </AuthProvider>
