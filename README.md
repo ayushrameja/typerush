@@ -19,9 +19,25 @@ pnpm run preview:cloudflare
 pnpm run deploy:cloudflare
 ```
 
-The preview script starts a local Workers preview. GitHub production builds and
-branch preview deployments need a separate Workers Builds connection after this
-migration is merged.
+`preview:cloudflare` starts a local Workers preview. `deploy:preview` publishes
+a branch Preview URL without changing production.
+
+Configure the existing Worker in Settings > Builds:
+
+| Setting | Value |
+| --- | --- |
+| Production branch | `main` |
+| Root directory | `/` |
+| Build command | `pnpm run build:cloudflare` |
+| Deploy command | `pnpm exec opennextjs-cloudflare deploy` |
+| Preview command | `pnpm exec wrangler preview` |
+| Enable Preview builds | Enabled |
+| Build variable `PNPM_VERSION` | `11.3.0` |
+| Build variable `NODE_VERSION` | `24` |
+
+After the Git connection and deployment token are configured in Cloudflare,
+pushes to `main` deploy production and other branches create Preview URLs.
+Worker Previews do not inherit production secrets.
 
 This hosting migration preserves the archived frontend as-is. It does not
 restore the Convex backend or change the existing behavior when
