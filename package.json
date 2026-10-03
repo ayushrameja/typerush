@@ -9,7 +9,8 @@
     "lint": "eslint",
     "build:cloudflare": "opennextjs-cloudflare build",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:preview": "opennextjs-cloudflare build && wrangler preview"
   },
   "dependencies": {
     "@auth/core": "^0.37.4",
@@ -36,5 +37,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "wrangler": "4.146.0"
-  }
+  },
+  "packageManager": "pnpm@11.3.0"
 }
