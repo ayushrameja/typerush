@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "typerush",
+  "account_id": "423419184139ad08e82cba83e7afb59c",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-03",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "typerush.ayush.im",
+      "custom_domain": true,
+      "zone_name": "ayush.im"
+    }
+  ]
+}
